@@ -7,6 +7,7 @@ the OpenCV calls it is made of, and stores every stage it read so two builds can
 identical output.
 """
 import argparse
+import faulthandler
 import glob
 import json
 import os
@@ -34,7 +35,12 @@ def timed(fn, n: int) -> float:
     return statistics.median(out)
 
 
+def stage(msg: str) -> None:
+    print(time.strftime("%H:%M:%S"), msg, flush=True)
+
+
 def main() -> None:
+    faulthandler.enable()                      # a native crash prints the Python stack
     ap = argparse.ArgumentParser()
     ap.add_argument("--frames", required=True)
     ap.add_argument("--out", required=True)
@@ -42,14 +48,18 @@ def main() -> None:
     a = ap.parse_args()
     paths = sorted(glob.glob(os.path.join(a.frames, "*.jpg")))
     raw = [open(p, "rb").read() for p in paths]
+    stage(f"cv2 {cv.__version__} at {cv.__file__}; {len(paths)} frames")
     site = SiteReader(os.path.join(ROOT, "sites", "hancock"))
+    stage("site loaded")
 
     t = time.perf_counter()
     imgs = [cv.imdecode(np.frombuffer(b, np.uint8), cv.IMREAD_COLOR) for b in raw]
     decode_s = time.perf_counter() - t
 
+    stage("decoded")
     stages, per_pass = None, []
-    for _ in range(a.repeats):
+    for k in range(a.repeats):
+        stage(f"reader pass {k}")
         t = time.perf_counter()
         res = [site.read(im) for im in imgs]
         per_pass.append(time.perf_counter() - t)
@@ -71,8 +81,11 @@ def main() -> None:
         "GaussianBlur_5x5": lambda: cv.GaussianBlur(im, (5, 5), 0),
         "resize_half": lambda: cv.resize(im, None, fx=0.5, fy=0.5, interpolation=cv.INTER_AREA),
     }
-    op_ms = {k: round(timed(f, 50) * 1e3, 3) for k, f in ops.items()}
-    ocr_s = timed(lambda: plate.read_datum(site.reference, site.plate, os.path.join(ROOT, "models", "crnn_en.onnx")), 3)
+    op_ms = {}
+    for k, f in ops.items():
+        stage(f"op {k}")
+        op_ms[k] = round(timed(f, 50) * 1e3, 3)
+    ocr_s = None
 
     info = cv.getBuildInformation()
     keep = [ln.strip() for ln in info.splitlines() if any(k in ln for k in
@@ -84,7 +97,11 @@ def main() -> None:
            "decode_s": round(decode_s, 3), "read_pass_s": [round(x, 3) for x in per_pass],
            "read_ms_per_frame": round(statistics.median(per_pass) / len(imgs) * 1e3, 2),
            "frames_per_s": round(len(imgs) / statistics.median(per_pass), 2),
-           "ocr_datum_s": round(ocr_s, 3), "op_ms": op_ms, "stages": stages}
+           "ocr_datum_s": ocr_s, "op_ms": op_ms, "stages": stages}
+    json.dump(out, open(a.out, "w"), indent=1)
+    stage("OCR datum (DNN)")                    # last: if the DNN path fails, the timings above are kept
+    out["ocr_datum_s"] = round(timed(lambda: plate.read_datum(site.reference, site.plate,
+                                                             os.path.join(ROOT, "models", "crnn_en.onnx")), 3), 3)
     json.dump(out, open(a.out, "w"), indent=1)
     print(json.dumps({k: v for k, v in out.items() if k not in ("stages", "build_info")}, indent=1))
 

@@ -33,14 +33,15 @@ curl -s -o pkg.tgz "{get}" && tar xzf pkg.tgz
 lscpu > /root/out/lscpu.txt; nproc >> /root/out/lscpu.txt
 source /opt/cool/venvs/python_3.12/bin/activate
 python -c "import cv2, numpy; print(cv2.__version__, cv2.__file__, numpy.__version__)" > /root/out/cool_import.txt
-python scripts/cool_bench.py --frames frames --out /root/out/cool.json
+python -X faulthandler scripts/cool_bench.py --frames frames --out /root/out/cool.json --repeats 2
 deactivate
 apt-get update -q && apt-get install -y -q python3.12-venv
+unset PYTHONPATH LD_LIBRARY_PATH          # COOL's activate exports these and deactivate keeps them
 python3.12 -m venv /root/pipcv
 /root/pipcv/bin/pip install -q opencv-python-headless==5.0.0.93 numpy==2.5.4
-/root/pipcv/bin/python scripts/cool_bench.py --frames frames --out /root/out/pip.json
+/root/pipcv/bin/python -X faulthandler scripts/cool_bench.py --frames frames --out /root/out/pip.json --repeats 2
 source /opt/cool/venvs/python_3.12/bin/activate
-python scripts/cool_bench.py --frames frames --out /root/out/cool_again.json
+python -X faulthandler scripts/cool_bench.py --frames frames --out /root/out/cool_again.json --repeats 2
 """
 
 
@@ -72,7 +73,6 @@ def main() -> None:
     r = ec2.run_instances(ImageId=a.ami, InstanceType=a.instance_type, MinCount=1, MaxCount=1,
                           UserData=USER_DATA.replace("{get}", get).replace("{put}", put),
                           InstanceInitiatedShutdownBehavior="terminate",
-                          BlockDeviceMappings=[{"DeviceName": "/dev/sda1", "Ebs": {"VolumeSize": 20, "DeleteOnTermination": True}}],
                           TagSpecifications=[{"ResourceType": "instance", "Tags": [{"Key": "Name", "Value": "stagesight-cool-bench"}]}])
     iid = r["Instances"][0]["InstanceId"]
     print("launched", iid, a.instance_type, a.ami)

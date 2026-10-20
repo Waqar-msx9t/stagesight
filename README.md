@@ -37,6 +37,12 @@ Agent, replaying the same flood with injected faults, 3 runs per Claude model (`
 0 false sensor flags. The reader gives a number for 2.4% of all hourly frames: it reads floods; below
 the plate or at night it reports `below_plate` or `unreadable` instead of guessing.
 
+**COOL on Graviton4** (c8g.xlarge, same 184 frames, `results/cool/`): the Cloud-Optimized OpenCV
+build (COOL 3.1, OpenCV 5.1 + KleidiCV) reads 59.2 frames/s against 56.9 for pip OpenCV 5.0, with
+identical stages in all 184 frames; `connectedComponentsWithStats` is 4.9x and `phaseCorrelate`
+1.25x faster. COOL's DNN text recognizer crashed in 3 of 3 runs, so the one-time OCR setup stays
+on pip OpenCV. Reproduce: `python scripts/cool_run.py` (launches, measures, terminates).
+
 ## How it works
 **Reader** (`stagesight/plate.py`, `stagesight/reader.py`)
 - *Setup, once per camera, no gauge data* (`scripts/setup_site.py`): HSV red mask,
@@ -78,6 +84,7 @@ python scripts/replay_agent.py --all --planner rules                            
 bash scripts/repeat_agent_runs.sh && python scripts/agent_stats.py                 # Table III (Bedrock)
 python scripts/replay_agent.py --scenario none --start 2026-07-21 --end 2026-10-19 --out results/agent_90d
 uv pip install -r requirements-dev.txt && python scripts/make_figures.py         # docs/figures
+python scripts/cool_run.py && python scripts/cool_stats.py                               # Table II (COOL)
 python scripts/build_replay.py                                                     # web/replay
 cd docs/paper && latexmk -pdf stagesight.tex                                              # the report
 ```

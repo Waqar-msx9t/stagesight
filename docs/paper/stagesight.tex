@@ -12,6 +12,7 @@
 \newtcolorbox{tracebox}[1]{enhanced, colback=cam!4, colframe=cam!70, boxrule=0.5pt, arc=1pt,
   left=3pt, right=3pt, top=2pt, bottom=2pt, fonttitle=\footnotesize\bfseries, title={#1}, fontupper=\footnotesize}
 \input{agent_stats.tex}
+\input{cool_stats.tex}
 
 \begin{document}
 \title{StageSight: A River Camera That Checks Its Gauge\\
@@ -34,7 +35,8 @@ NY (USGS 01421500; NWS minor flood, 18.08~ft peak), the camera agrees with the U
 regression trained on normal flows has 6.3~ft RMSE. An event-gated agent (Claude on Amazon
 Bedrock) compares camera and gauge, gathers evidence with tools, and queues sensor flags and
 flood alerts for human approval. \AgentAbstract{} The system runs live on AWS Lambda (Graviton), EventBridge, S3 and Bedrock,
-and unchanged on a laptop CPU.
+and unchanged on a laptop CPU; on Graviton4 the Cloud-Optimized OpenCV build (COOL) reads 59
+frames/s with output identical to stock OpenCV.
 \end{abstract}
 
 \section{Introduction}
@@ -209,6 +211,36 @@ read, event check, write) takes a median of 6.3~s ($n=23$, peak memory 295~MB) a
 request a median of 47~ms ($n=1{,}227$). Claude is called only on events: none on a quiet day,
 two or three during the flood, each with three evidence calls and one or two actions. With Opus~4.6 a replayed flood used
 \AgentTokens{} (median over runs).
+
+\textbf{COOL on Graviton4.} To test the Cloud-Optimized OpenCV Library (COOL~3.1, OpenCV
+5.1-dev with KleidiCV~0.7.0, built for Neoverse-V2), we ran the reader on the 184 frames of
+21~July--1~August on one c8g.xlarge (4 vCPU Graviton4) twice: with COOL and with the pip
+\texttt{opencv-python-headless}~5.0.0 that the Lambda functions use (Table~\ref{tab:cool};
+\texttt{scripts/cool\_run.py} launches the instance, runs both builds, uploads the results and
+terminates it). Both builds read the same stage in all 184 frames. COOL is 4\% faster end to end
+and up to 4.9$\times$ faster in single kernels; the reader's remaining time is NumPy and Python.
+COOL's DNN text recognizer aborted with a heap error in 3 of 3 runs, while pip OpenCV ran it, so
+the one-time datum reading stays on the pip build.
+
+\begin{table}[t]
+\caption{Same Graviton4 instance (c8g.xlarge), COOL vs pip OpenCV}
+\label{tab:cool}
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+ & COOL 3.1 & pip 5.0.0 & speed-up\\
+\midrule
+full reader, frames/s & \COOLfps & \PIPfps & \COOLspeed\\
+\texttt{connectedComponentsWithStats} & \COOLcc~ms & \PIPcc~ms & \COOLccx\\
+\texttt{phaseCorrelate} (plate crop) & \COOLpc~ms & \PIPpc~ms & \COOLpcx\\
+\texttt{morphologyEx} (opening) & \COOLmo~ms & \PIPmo~ms & \COOLmox\\
+\texttt{imdecode} (1080$\times$1920 JPEG) & \COOLid~ms & \PIPid~ms & \COOLidx\\
+DNN text recognition (datum) & crashed & \PIPocr~s & --\\
+\bottomrule
+\multicolumn{4}{@{}p{0.95\columnwidth}@{}}{\scriptsize Medians; reader over 184 frames, 2 passes; kernels over 50 calls. Identical stages in all frames. \texttt{results/cool/}.}
+\end{tabular}
+\end{table}
 
 \section{Experiments}
 \subsection{Accuracy on a real flood}

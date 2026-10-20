@@ -24,3 +24,4 @@ docs/paper/pg-*.png
 docs/figures/*.aux
 docs/figures/*.log
 docs/paper/stagesight.pdf
+!results/cool/

@@ -68,6 +68,10 @@ camera to become a second instrument that can check the first.
   In the debris case it noticed the visible marks drop from 11 to 7 while both gauges said the
   river was falling.
 - **90 days of normal operation** (rule planner, 1,863 frames): 0 false sensor flags.
+- **COOL on Graviton4:** on one c8g.xlarge, the Cloud-Optimized OpenCV build reads 59.2 frames/s
+  against 56.9 for pip OpenCV 5.0, with identical stages in all 184 flood frames;
+  connectedComponentsWithStats is 4.9x faster. COOL's DNN text recognizer crashed in 3 of 3 runs,
+  so the one-time OCR setup stays on stock OpenCV (reported in the report).
 
 ### Challenges I ran into
 - My first approach, a self-calibrating waterline detector for any camera, reached 0.29 ft MAE
@@ -105,12 +109,15 @@ only, sends nothing without a person's approval (live approvals need an operator
 labels a camera stage provisional whenever it stands in for the gauge.
 
 ### Special awards
+- **Best Use of COOL:** the reader runs on AWS Graviton4 with COOL 3.1, measured against stock
+  OpenCV on the same instance with identical output (report Table II, `results/cool/`,
+  `scripts/cool_run.py` reproduces it end to end and terminates the instance).
 - **Agentic Vision:** the OpenCV reading decides what happens next: code turns it into events,
   and the agent's evidence gathering (re-reading frames, mark counts) changes which instrument is
   flagged. Evidence: report Sec. V and VII-C, Table III, Fig. 5 to 7, and the replay on the live site.
 
 ## Built with
-opencv, opencv-dnn, onnx, python, numpy, aws-lambda, aws-graviton, amazon-bedrock, claude,
+opencv, opencv-dnn, cool, aws-graviton4, onnx, python, numpy, aws-lambda, aws-graviton, amazon-bedrock, claude,
 amazon-s3, amazon-eventbridge, aws-iam, lambda-function-url, usgs-nims, chart.js, pytest,
 github-actions
 
