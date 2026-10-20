@@ -81,7 +81,7 @@ camera to become a second instrument that can check the first.
   baseline blamed the healthy gauge and published the bad camera stage; Claude blamed the camera.
   In the debris case it noticed the visible marks drop from 11 to 7 while both gauges said the
   river was falling.
-- **90 days of normal operation** (rule planner, 1,863 frames): 0 false sensor flags.
+- **90 days of normal operation** (1,863 frames): 0 false sensor flags from the rule planner and 0 from Claude Opus 4.6 (one run, 17k input / 2.9k output tokens); both drafted only the action and flood alerts at the real flood.
 - **COOL on Graviton4:** with 16 worker processes a c8g.4xlarge re-reads the whole 90-day archive
   (1,869 frames) in 4.1 s, about $0.0008 at on-demand prices, scaling almost linearly from 33 frames/s
   with one worker. COOL gives the same status and stage as pip OpenCV in every frame; it is 4% faster

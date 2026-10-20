@@ -58,7 +58,9 @@ Agent, replaying the same flood with injected faults, 3 runs per Claude model
 
 Claude is not error-free: during the frozen gauge it also flagged the healthy camera at the second
 peak, and there the flood alert came from the safety net. Over 90 days of normal operation (1,863
-frames) the rule planner raised 0 false sensor flags. The reader gives a number for 2.4% of all
+frames) both the rule planner and Claude Opus 4.6 raised 0 false sensor flags; each drafted the same
+two alerts (action, then flood) at the real Jul 29 flood, and Claude used 17k input / 2.9k output
+tokens (`results/agent_90d_claude/`). The reader gives a number for 2.4% of all
 hourly frames: it reads floods; below the plate or at night it reports `below_plate` or
 `unreadable` instead of guessing.
 
@@ -112,6 +114,7 @@ python scripts/bootstrap_ci.py                                                  
 python scripts/replay_agent.py --all --planner rules                                      # rule baseline
 bash scripts/repeat_agent_runs.sh && python scripts/agent_stats.py                        # Table IV (Bedrock)
 python scripts/replay_agent.py --scenario none --start 2026-07-21 --end 2026-10-19 --out results/agent_90d
+python scripts/replay_agent.py --scenario none --start 2026-07-21 --end 2026-10-19 --planner claude --model global.anthropic.claude-opus-4-6-v1 --out results/agent_90d_claude
 python scripts/cool_run.py --instance-type c8g.xlarge                                     # Table II (COOL; needs
 python scripts/cool_run.py --instance-type c8g.4xlarge --scale && python scripts/cool_stats.py  # AWS + COOL subscription)
 uv pip install -r requirements-dev.txt && python scripts/make_figures.py && python scripts/make_architecture.py

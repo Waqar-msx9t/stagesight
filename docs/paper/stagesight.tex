@@ -379,8 +379,10 @@ queued for approval.}
 \label{fig:trace}
 \end{figure}
 
-In 90 days of normal operation (1,863 frames, rule planner) there were no false sensor flags;
-the two alerts were an action alert and a flood alert, both at the real flood.
+In 90 days of normal operation (1,863 frames) neither the rule planner nor Claude Opus~4.6
+(one run, 17k input and 2.9k output tokens) raised a false sensor flag; for both, the two alerts
+were an action alert and a flood alert, both at the real flood. Only two events reached the planner
+in those 90 days, both during the flood, so this is a small sample, not a measured false-alarm rate.
 
 \subsection{Development history of the agent}
 \label{sec:history}
