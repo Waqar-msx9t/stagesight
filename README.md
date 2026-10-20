@@ -11,6 +11,10 @@ the plate. **No gauge data is used to read the stage.** A pixel-regression basel
 normal flows missed by 6.3 ft. Agent replay with injected gauge faults: offset, dropout,
 flatline and drift all caught (1 to 8 h), and 0 false sensor flags over 90 days (1,869 frames).
 
+Technical report: [docs/REPORT.pdf](docs/REPORT.pdf) ([source](docs/REPORT.md)). Architecture:
+[docs/architecture.png](docs/architecture.png). Figures: `python scripts/make_figures.py`
+(needs `matplotlib` and `SciencePlots`, dev only).
+
 ## How the camera reads the plate (OpenCV 5)
 1. **Setup, once per camera, no gauge data** (`scripts/setup_site.py`):
    - Red plate marks: HSV mask and connected components; the plate axis from `cv.fitLine`.

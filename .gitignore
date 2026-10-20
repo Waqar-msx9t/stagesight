@@ -14,3 +14,4 @@ results/*
 .env
 .env.*
 .claude/
+*_resized.*

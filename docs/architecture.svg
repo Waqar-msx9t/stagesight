@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b4250"/>
+    </marker>
+    <style>
+      .t  { font-size: 22px; font-weight: 700; fill: #1d2330; }
+      .h  { font-size: 17px; font-weight: 700; fill: #1d2330; }
+      .b  { font-size: 14.5px; fill: #333a46; }
+      .m  { font-size: 13.5px; fill: #333a46; font-family: Consolas, Menlo, monospace; }
+      .s  { font-size: 13px; fill: #5a6270; }
+      .ln { stroke: #3b4250; stroke-width: 2; fill: none; marker-end: url(#a); }
+      .dl { stroke: #3b4250; stroke-width: 2; fill: none; stroke-dasharray: 6 5; marker-end: url(#a); }
+    </style>
+  </defs>
+  <rect width="1600" height="1000" fill="#ffffff"/>
+
+  <text x="40" y="48" class="t">StageSight: OpenCV 5 reads the staff plate, a Claude agent checks the gauge, a person approves</text>
+  <text x="40" y="74" class="s">Hancock, NY (USGS 01421500). Everything below the AWS line runs unchanged on a laptop (local store, rule or Claude planner).</text>
+
+  <!-- Public data -->
+  <rect x="40" y="110" width="300" height="560" rx="10" fill="#f4f6f9" stroke="#c9d0db"/>
+  <text x="60" y="142" class="h">Public data (no keys)</text>
+  <rect x="60" y="160" width="260" height="96" rx="8" fill="#fff" stroke="#c9d0db"/>
+  <text x="74" y="186" class="h">USGS NIMS camera</text>
+  <text x="74" y="208" class="b">newest frame, hourly archive</text>
+  <text x="74" y="230" class="m">/nims/v0/listFiles</text>
+  <rect x="60" y="272" width="260" height="96" rx="8" fill="#fff" stroke="#c9d0db"/>
+  <text x="74" y="298" class="h">USGS gauge 01421500</text>
+  <text x="74" y="320" class="b">gage height, param 00065</text>
+  <text x="74" y="342" class="b">(the sensor being checked)</text>
+  <rect x="60" y="384" width="260" height="96" rx="8" fill="#fff" stroke="#c9d0db"/>
+  <text x="74" y="410" class="h">Upstream gauge 01417500</text>
+  <text x="74" y="432" class="b">Harvard, NY, ~3 h upstream</text>
+  <text x="74" y="454" class="b">(agent tool)</text>
+  <rect x="60" y="496" width="260" height="96" rx="8" fill="#fff" stroke="#c9d0db"/>
+  <text x="74" y="522" class="h">NWS NWPS, HKCN6</text>
+  <text x="74" y="544" class="b">action 14 ft, flood 18 ft</text>
+  <text x="74" y="566" class="b">(set once in site.json)</text>
+  <text x="60" y="630" class="s">Setup once per camera, no gauge data:</text>
+  <text x="60" y="650" class="m">scripts/setup_site.py</text>
+
+  <!-- AWS -->
+  <rect x="380" y="96" width="1180" height="620" rx="12" fill="#fff8ef" stroke="#e8a74f" stroke-width="2"/>
+  <text x="400" y="128" class="h" fill="#9a5a00">AWS, us-east-2 (Lambda on Graviton arm64, zip package)</text>
+
+  <rect x="400" y="150" width="200" height="74" rx="8" fill="#fff" stroke="#e8a74f"/>
+  <text x="414" y="178" class="h">EventBridge</text>
+  <text x="414" y="202" class="m">rate(15 minutes)</text>
+
+  <!-- scheduled lambda -->
+  <rect x="400" y="250" width="560" height="440" rx="10" fill="#fff" stroke="#e8a74f" stroke-width="2"/>
+  <text x="420" y="280" class="h">Lambda stagesight-scheduled (1.5 GB, arm64)</text>
+  <rect x="420" y="296" width="520" height="250" rx="8" fill="#eef4ff" stroke="#7aa2e3"/>
+  <text x="436" y="322" class="h" fill="#1f4fa0">OpenCV 5 plate reader (every frame)</text>
+  <text x="436" y="348" class="b">1. Quality gate: blur, darkness, glare → "rejected"</text>
+  <text x="436" y="372" class="b">2. Re-register dry plate top</text>
+  <text x="680" y="372" class="m">cv.phaseCorrelate</text>
+  <text x="436" y="396" class="b">3. Each foot/half-foot mark visible or hidden:</text>
+  <text x="456" y="418" class="m">cv.cvtColor(Lab) a* contrast vs ring, cv.dilate</text>
+  <text x="436" y="442" class="b">4. Waterline = best visible / hidden split</text>
+  <text x="436" y="466" class="b">5. Pixels → feet: 1D projective map from the marks</text>
+  <text x="436" y="490" class="b">6. Stage = OCR datum − plate reading</text>
+  <text x="436" y="514" class="b">Status: ok | below_plate | unreadable | camera_moved</text>
+  <text x="436" y="536" class="s">Setup: cv.inRange, cv.connectedComponentsWithStats, cv.fitLine, cv.dnn OCR</text>
+
+  <rect x="420" y="562" width="520" height="112" rx="8" fill="#f6f1ff" stroke="#a487d6"/>
+  <text x="436" y="588" class="h" fill="#5b3a99">Event detector (code, every frame)</text>
+  <text x="436" y="612" class="b">camera vs gauge &gt; 0.5 ft for 2 frames · gauge silent ·</text>
+  <text x="436" y="634" class="b">camera blind in high water · NWS level reached</text>
+  <text x="436" y="658" class="s">No event → no LLM call (most ticks cost only Lambda time)</text>
+
+  <!-- Bedrock -->
+  <rect x="1010" y="250" width="530" height="300" rx="10" fill="#fff" stroke="#e8a74f" stroke-width="2"/>
+  <text x="1030" y="280" class="h">Amazon Bedrock: Claude Opus 4.6 agent</text>
+  <text x="1030" y="302" class="m">global.anthropic.claude-opus-4-6-v1</text>
+  <text x="1030" y="332" class="b">Evidence tools:</text>
+  <text x="1050" y="354" class="m">reread_earlier_frames  get_site_gauge</text>
+  <text x="1050" y="376" class="m">get_upstream_gauge</text>
+  <text x="1030" y="406" class="b">Final actions:</text>
+  <text x="1050" y="428" class="m">flag_sensor  draft_alert</text>
+  <text x="1050" y="450" class="m">publish_provisional_stage  no_action</text>
+  <text x="1030" y="482" class="b">Memory: open issues + recent actions in every event</text>
+  <text x="1030" y="506" class="b">Safety net: NWS level reached → draft alert, always</text>
+  <text x="1030" y="530" class="b">Fallback: rule planner on throttle, error or refusal</text>
+
+  <!-- S3 -->
+  <rect x="1010" y="580" width="250" height="110" rx="10" fill="#fff" stroke="#e8a74f" stroke-width="2"/>
+  <text x="1030" y="610" class="h">S3 (private)</text>
+  <text x="1030" y="634" class="m">latest.json  events.json</text>
+  <text x="1030" y="656" class="m">timeseries  approvals</text>
+  <text x="1030" y="678" class="m">state.json  overlay.jpg</text>
+
+  <!-- API lambda -->
+  <rect x="1290" y="580" width="250" height="110" rx="10" fill="#fff" stroke="#e8a74f" stroke-width="2"/>
+  <text x="1310" y="610" class="h">Lambda stagesight-api</text>
+  <text x="1310" y="632" class="b">Function URL: dashboard,</text>
+  <text x="1310" y="654" class="m">/data/* POST /measure</text>
+  <text x="1310" y="676" class="m">POST /approve</text>
+
+  <!-- people -->
+  <rect x="1010" y="780" width="530" height="170" rx="10" fill="#effaf2" stroke="#5fb37a" stroke-width="2"/>
+  <text x="1030" y="810" class="h" fill="#22663a">Operator (hydrologist / emergency manager)</text>
+  <text x="1030" y="836" class="b">Dashboard: camera frame + overlay, camera vs gauge chart,</text>
+  <text x="1030" y="858" class="b">NWS levels, agent decision log with every tool call</text>
+  <text x="1030" y="890" class="b">Approval queue: sensor flags and alert drafts wait here.</text>
+  <text x="1030" y="912" class="b">Nothing is sent automatically.</text>
+  <text x="1030" y="936" class="s">POST /measure lets anyone test the reader with their own frame.</text>
+
+  <!-- laptop -->
+  <rect x="40" y="780" width="920" height="170" rx="10" fill="#f4f6f9" stroke="#c9d0db"/>
+  <text x="60" y="810" class="h">Same code on a laptop (CPU only, no GPU)</text>
+  <text x="60" y="836" class="m">python scripts/serve_local.py --mode replay --fault flatline</text>
+  <text x="60" y="860" class="m">python scripts/replay_agent.py --all --planner rules|claude</text>
+  <text x="60" y="884" class="m">python tests/test_plate.py</text>
+  <text x="60" y="914" class="b">Replay injects gauge faults (offset, dropout, frozen, drift) and camera faults</text>
+  <text x="60" y="936" class="b">(debris, lens spray) into the real Jul 29 2026 flood to score the agent.</text>
+
+  <!-- arrows -->
+  <path class="ln" d="M500,224 L500,248"/>
+  <path class="ln" d="M320,208 L418,330"/>
+  <path class="ln" d="M320,320 L362,320 L362,610 L418,610"/>
+  <path class="ln" d="M960,420 L1008,420"/>
+  <text x="963" y="410" class="s">event</text>
+  <path class="dl" d="M320,450 L352,450 L352,238 L1100,238 L1100,248"/>
+  <text x="760" y="231" class="s">tool calls</text>
+  <path class="ln" d="M1135,550 L1135,578"/>
+  <path class="ln" d="M960,660 L1008,660"/>
+  <path class="ln" d="M1260,635 L1288,635"/>
+  <path class="ln" d="M1415,690 L1415,778"/>
+  <path class="ln" d="M1180,778 L1180,692"/>
+  <text x="1188" y="744" class="s">approve / reject</text>
+  <text x="1423" y="744" class="s">HTTPS</text>
+</svg>
