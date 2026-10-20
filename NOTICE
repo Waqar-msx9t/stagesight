@@ -1,0 +1,8 @@
+Third-party material in this repository
+
+- models/crnn_en.onnx: text_recognition_CRNN_EN_2021sep.onnx from the OpenCV Zoo
+  (https://github.com/opencv/opencv_zoo), redistributed unchanged under that
+  repository's license for the model.
+- docs/icons/*.png: AWS Architecture Icons (https://aws.amazon.com/architecture/icons/),
+  used in the architecture diagram as AWS permits for architecture diagrams.
+- Camera frames and gauge data: public U.S. Geological Survey and NOAA/NWS data.

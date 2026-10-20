@@ -1,101 +1,106 @@
-# StageSight
+# StageSight: a river camera that checks its own gauge
 
-A USGS gauge camera reads the river stage off its staff plate with OpenCV 5, and an agent uses
-that reading to check the gauge's own sensor: it flags a drifting, frozen or offset sensor,
-fills in when the gauge goes silent, and drafts flood alerts for a person to approve.
-Runs on AWS (Lambda on Graviton, Bedrock, S3) and, unchanged, on a laptop.
+OpenCV 5 reads the river stage off the staff plate in a USGS gauge camera, **with no gauge data**.
+An agent (Claude on Amazon Bedrock) compares that reading with the gauge sensor, decides which
+instrument is wrong, and queues sensor flags and flood alerts for a person to approve. Runs live
+on AWS (Lambda on Graviton, EventBridge, S3, Bedrock) and, unchanged, on a laptop CPU.
 
-**Result, Hancock NY (USGS 01421500), Jul 29 2026 flood (NWS minor flood):** 0.26 ft RMSE
-against the USGS gauge, 97% of readings within 0.5 ft, on 30 daylight frames with the water on
-the plate. **No gauge data is used to read the stage.** A pixel-regression baseline fitted on
-normal flows missed by 6.3 ft. Agent replay with injected gauge faults: offset, dropout,
-flatline and drift all caught (1 to 8 h), and 0 false sensor flags over 90 days (1,869 frames).
+**Technical report:** [docs/StageSight_report.pdf](docs/StageSight_report.pdf) (5 pages, [LaTeX source](docs/paper/stagesight.tex))
+· **Live dashboard:** https://zkdbpwl26gqzom5j3osjaoi4dy0htqoq.lambda-url.us-east-2.on.aws/
 
-Technical report: [docs/REPORT.pdf](docs/REPORT.pdf) ([source](docs/REPORT.md)). Architecture:
-[docs/architecture.png](docs/architecture.png). Figures: `python scripts/make_figures.py`
-(needs `matplotlib` and `SciencePlots`, dev only).
+![Pipeline](docs/figures/pipeline.png)
 
-## How the camera reads the plate (OpenCV 5)
-1. **Setup, once per camera, no gauge data** (`scripts/setup_site.py`):
-   - Red plate marks: HSV mask and connected components; the plate axis from `cv.fitLine`.
-   - The foot marks' positions give the camera's 1D projective map from pixels to feet
-     (3-parameter homography; fit error 0.05 ft; missing marks detected).
-   - The datum is read from the printed foot numbers with the OpenCV 5 DNN
-     `TextRecognitionModel` (CRNN, OpenCV Zoo) and a majority vote; only two-digit reads may vote.
-2. **Every frame** (`stagesight/plate.py`, `stagesight/reader.py`):
-   - Quality gate (blur, darkness).
-   - Re-locate the plate with `cv.phaseCorrelate` on its always-dry top; the camera shifts a few px between days.
-   - Each mark is visible or hidden by its Lab a* contrast against the plate around it. This
-     holds in sun, shade and overcast; water and foam give no contrast.
-   - Waterline = best split between visible marks above and hidden marks below; stage = datum − plate reading.
-   - Status `below_plate`, `unreadable` (night, fog, spray), `rejected` or `camera_moved`
-     instead of a wrong number.
+## Results
 
-A second, self-calibrated mode for cameras without a plate (`stagesight/selfcal.py`) learns a
-per-pixel **flood-stage map** from the archive and the gauge: 0.29 ft MAE in range on the same
-wall, but it does not extrapolate to floods. It fails on far-bank bridge cameras (Hermann MO,
-De Soto KS), which are reported as failure cases.
+Hancock, NY (USGS 01421500), flood of 29 July 2026 (NWS minor flood, 18.08 ft peak), 30 daylight
+frames with water on the plate, 27 of them above anything seen in the normal-flow frames:
 
-## The agent (`stagesight/agent.py`)
-- OpenCV runs every frame. **Claude is only called on an event**: camera and gauge disagree for
-  2 frames, the gauge goes silent, the camera goes blind in high water, or the stage passes an
-  NWS level.
-- Tools: re-read earlier frames, the gauge history, the upstream gauge (USGS 01417500, Harvard NY).
-- Actions: `flag_sensor` and `draft_alert` go to an **approval queue** (never sent
-  automatically); `publish_provisional_stage` and `no_action`.
-- Planners: `ClaudePlanner` (Claude Opus 4.6 on Bedrock, manual tool loop) and `RulePlanner`
-  (same tools, deterministic). The rule planner is the offline baseline, the test oracle and
-  the fallback if the model declines.
-- Every decision and tool call goes to `events.json` and is shown on the dashboard.
+| Method | Gauge data | RMSE (ft) | Within 0.5 ft |
+|---|---|---|---|
+| **StageSight** (plate marks + OCR datum) | none | **0.26** | **97%** |
+| Plate scale + offset fitted to the gauge | training | 0.37 | 83% |
+| Linear pixel fit, trained on normal flows | training | 6.31 | 23% |
 
-## Run it on a laptop
+![Flood](docs/figures/flood.png)
+
+Agent, replaying the same flood with injected faults (single runs, `results/agent/`):
+
+| Fault | Rule baseline | Claude Opus 4.6 |
+|---|---|---|
+| Gauge offset +1 ft / silent 8 h | caught, 1 h / 1 h | caught, 1 h / 1 h |
+| Gauge frozen 10 h | caught, 4 h | **caught, 2 h** |
+| Gauge drift to +1.5 ft | caught, 8 h | caught, 7 h |
+| Debris over the plate (camera wrong) | blamed the healthy gauge | **blamed the camera** |
+| Spray on the lens (camera wrong) | blamed the healthy gauge | **blamed the camera** |
+
+Rule planner over 90 days of normal operation (1,863 replayed frames): 0 false sensor flags.
+The reader returns a number for 2.4% of all hourly frames: the plate reads floods; below it, or
+at night, it reports `below_plate` or `unreadable` instead of guessing.
+
+## How it works
+**Reader** (`stagesight/plate.py`, `stagesight/reader.py`)
+- *Setup, once per camera, no gauge data* (`scripts/setup_site.py`): HSV red mask,
+  `cv.connectedComponentsWithStats` and `cv.fitLine` find the plate and its marks; the foot marks
+  give a 1-D projective map from pixels to feet (fit error 0.05 ft); the printed numbers, read with
+  `cv.dnn.TextRecognitionModel` (OpenCV Zoo CRNN) and a vote, give the datum (20 ft, 6 of 7 votes).
+- *Every frame*: quality gate; `cv.phaseCorrelate` re-registers the plate; each mark is visible or
+  hidden by its Lab a* contrast against its surround; the waterline is the best visible/hidden split.
+
+**Agent** (`stagesight/agent.py`): code raises an event (camera/gauge disagree, gauge silent,
+camera blind in high water, NWS level reached); only then does Claude run a tool loop:
+`reread_earlier_frames`, `get_site_gauge`, `get_upstream_gauge` (USGS 01417500), then
+`flag_sensor` / `draft_alert` (approval queue), `publish_provisional_stage` or `no_action`.
+Agent memory, a safety net that always surfaces flood alerts, and a rule fallback.
+
+**AWS** ([architecture](docs/figures/architecture.png)): EventBridge (15 min) → Lambda reader
+(arm64, OpenCV 5) → Bedrock on events → private S3 → Lambda API + Function URL (dashboard,
+`POST /measure`, `POST /approve`). Median tick 6.3 s; API 47 ms.
+
+## Run it
 ```bash
 uv venv --python 3.12 .venv && uv pip install --python .venv/Scripts/python.exe -r requirements.txt
-python tests/test_synthetic.py && python tests/test_plate.py
-python scripts/serve_local.py --mode replay --fault flatline     # replay the flood with a frozen gauge
-python scripts/serve_local.py --mode live                        # live USGS camera, every 15 min
-# open http://localhost:8000
+python tests/test_plate.py                                       # plate reader + agent, offline
+python scripts/serve_local.py --mode replay --fault flatline     # dashboard at http://localhost:8000
+python scripts/serve_local.py --mode live                        # live USGS camera
 ```
 
-## Reproduce the numbers
+## Reproduce
 ```bash
 python scripts/download_site.py --cam NY_East_Branch_Delaware_River_at_Hancock_Staff --site 01421500 --days 90 --out data/hancock
 python scripts/flood_stress_test.py --index data/hancock/images.csv --gauge data/hancock/gauge.csv \
     --reference data/hancock/reference.jpg --cache results/hancock_stack.npz \
-    --test-start 2026-07-21 --test-end 2026-08-01 --no-align --out results/hancock_v2      # builds the frame cache
+    --test-start 2026-07-21 --test-end 2026-08-01 --no-align --out results/hancock_v2      # frame cache
 python scripts/plate_test.py --cache results/hancock_stack.npz --reference data/hancock/reference.jpg \
-    --test-start 2026-07-21 --test-end 2026-08-01 --out results/hancock_plate             # plate accuracy
-python scripts/replay_agent.py --all --planner rules                                       # injected faults
+    --test-start 2026-07-21 --test-end 2026-08-01 --out results/hancock_plate             # accuracy table
+python scripts/replay_agent.py --all --planner rules        # or --planner claude (AWS credentials)
 python scripts/replay_agent.py --scenario none --start 2026-07-21 --end 2026-10-19 --out results/agent_90d
+uv pip install --python .venv/Scripts/python.exe -r requirements-dev.txt
+python scripts/make_figures.py                              # docs/figures/*.pdf|png
+cd docs/paper && latexmk -pdf stagesight.tex                # report
 ```
 
-## AWS
-- One zip package for arm64, built without Docker (`aws/build_package.py` cross-installs the
-  `aarch64-manylinux_2_28` wheels with `uv`), running as two Lambda functions on Graviton:
-  - `handler.scheduled`, triggered by an EventBridge rule every 15 minutes;
-  - `handler.api`, behind a Function URL: the dashboard (`/`), `GET /latest`, `GET /approvals`,
-    `POST /measure` (your own frame), `POST /approve`.
-- The agent calls Claude on Amazon Bedrock (`AGENT_MODEL`, default `global.anthropic.claude-opus-4-6-v1`,
-  the most capable Claude enabled for this new account).
-- A private S3 bucket holds the results; the API function serves them, so the bucket is never public.
-- IAM role limited to that bucket and `bedrock:InvokeModel*`.
-- Environment: `STORE=s3:<bucket>`, `AGENT_BACKEND=bedrock|rules`, `AGENT_MODEL`, `BEDROCK_REGION`, `UPSTREAM_SITE=01417500`.
-
-Deploy (AWS CLI v2 signed in with `aws login`, `uv` installed):
+## Deploy to AWS
 ```bash
-python aws/build_package.py                  # build/stagesight_lambda.zip
-AGENT_BACKEND=bedrock bash aws/deploy.sh     # bucket, role, 2 functions, schedule, Function URL
+python aws/build_package.py                  # 78 MB zip with Linux arm64 wheels, no Docker
+AGENT_BACKEND=bedrock bash aws/deploy.sh     # bucket, IAM role, 2 functions, schedule, Function URL
 ```
-`aws/Dockerfile` is an unused alternative (container image) for accounts that prefer ECR.
+The role can read/write only the project bucket and invoke Bedrock models. `POST /approve` is open
+in this demo; put it behind authentication for operational use. `aws/Dockerfile` is an unused
+container-image alternative.
 
-## Data
-Public USGS data only: camera frames from the NIMS API, gage height (parameter 00065) from USGS
-Water Services. NWS action and flood stages for HKCN6 from the NWPS API (14 ft and 18 ft).
+## Repository map
+| Path | What |
+|---|---|
+| `stagesight/plate.py`, `reader.py` | plate reader (the method in the report) |
+| `stagesight/agent.py`, `service.py`, `world.py`, `storage.py`, `usgs.py` | agent, live tick, replay world, S3/local store, USGS/NIMS clients |
+| `stagesight/selfcal.py`, `vision.py`, `calibrate.py`, `scripts/flood_stress_test.py` | self-calibrated mode for cameras without a plate (research, report §VIII) and the frame cache |
+| `aws/`, `web/` | Lambda handlers, build and deploy scripts, dashboard |
+| `results/` | metrics and agent traces behind every number |
+| `docs/` | report, figures, Devpost text |
 
 ## Limitations
-- Plate mode needs a plate with red foot and half-foot marks, in view and lit. Night infrared
-  frames are "unreadable". Readings step in 0.5 ft (the mark spacing).
-- The camera at Hancock started on Apr 14, 2026, so the Jul 29 flood is its only flood: the
-  accuracy rests on 30 frames.
-- Faults below the plate (stage under ~11 ft) cannot be checked by the camera.
-- StageSight is a decision aid, not an official warning system.
+Needs a plate with red marks in view and daylight; readings step in 0.5 ft; below the plate
+(~11 ft) the camera cannot check the gauge. The Hancock camera started in April 2026, so the
+29 July flood is its only flood. StageSight is a decision aid, not an official warning system.
+
+MIT licensed; third-party material in [NOTICE](NOTICE).

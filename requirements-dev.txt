@@ -1,0 +1,4 @@
+# figures and the report (not needed by the Lambda package)
+-r requirements.txt
+matplotlib==3.11.2
+SciencePlots==2.2.2

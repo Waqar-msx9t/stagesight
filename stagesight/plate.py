@@ -1,9 +1,9 @@
-"""Staff-plate mode: use the plate's own printed graduations as the ruler.
+"""Staff-plate reader: the plate's own printed marks are the ruler, its printed numbers the datum.
 
-The plate's red bars are found with an HSV mask, the plate axis with a robust line fit, and the
-bars' positions along the axis give the camera's 1D projective map from pixels to plate units.
-Only the plate offset (the stage of one bar) is taken from the gauge, so a flood far above the
-calibration period is read with the plate's printed scale, not an extrapolated curve.
+Setup (once per camera, no gauge data): find_plate() locates the red marks and fits the 1-D
+projective map from pixels to plate units; read_datum() reads the foot numbers with the OpenCV
+DNN text recogniser. Every frame: read_bars() registers the plate, decides which marks are still
+visible and places the waterline between the lowest visible and the first hidden mark.
 """
 from __future__ import annotations
 
@@ -126,21 +126,6 @@ def to_units(plate: dict, t) -> np.ndarray:
     a, b, c = plate["coef"]
     t = np.asarray(t, float)
     return (a * t + b) / (c * t + 1)
-
-
-def transects(plate: dict, img_shape: tuple[int, int], below: float = 250.0,
-              offsets=(-0.4, 0.0, 0.4)) -> list:
-    """Lines along the plate face, [top of plate, below the plate bottom], across its width."""
-    o, d, nrm = (np.array(plate[k]) for k in ("origin", "axis", "normal"))
-    h, w = img_shape
-    out = []
-    for f in offsets:
-        shift = nrm * f * plate["half_width"]
-        top = o + d * plate["t_top"] + shift
-        bot = o + d * (plate["t_bottom"] + below) + shift
-        bot = np.clip(bot, 0, [w - 1, h - 1])
-        out.append([top.tolist(), bot.tolist()])
-    return out
 
 
 def bar_masks(reference: np.ndarray, plate: dict, min_area: int = 120) -> list[dict]:
@@ -288,17 +273,3 @@ def refine(img: np.ndarray, plate: dict, bars: list[dict], k: int, shift, t_lo: 
         cuts.append(int(np.argmin(cost)))
     t = t0 + (t1 - t0) * np.median(cuts) / (n - 1)
     return float(np.clip(t, t_lo, t_hi))
-
-
-def read(img: np.ndarray, plate: dict, method: str = "both", min_confidence: float = 1.0) -> dict:
-    """Waterline on the plate, in plate units (ft below the top bar). Higher water = smaller."""
-    lines = transects(plate, img.shape[:2])
-    m = vision.measure(img, lines, method=method, min_confidence=min_confidence)
-    o, d = np.array(plate["origin"]), np.array(plate["axis"])
-    m["units"] = None
-    if m["status"] == "ok":
-        ts = [float((np.array(r["pixel"]) - o) @ d) for r in m["transects"]
-              if r["confidence"] >= min_confidence]
-        m["units"] = float(to_units(plate, np.median(ts)))
-    m["lines"] = lines
-    return m

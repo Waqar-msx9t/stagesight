@@ -15,3 +15,12 @@ results/*
 .env.*
 .claude/
 *_resized.*
+docs/paper/*.aux
+docs/paper/*.log
+docs/paper/*.fls
+docs/paper/*.fdb_latexmk
+docs/paper/*.out
+docs/paper/pg-*.png
+docs/figures/*.aux
+docs/figures/*.log
+docs/paper/stagesight.pdf

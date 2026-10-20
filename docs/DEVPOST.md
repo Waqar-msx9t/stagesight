@@ -1,6 +1,6 @@
 # Devpost submission text
 
-Paste each field into the Devpost "Enter a submission" form. Numbers match `docs/REPORT.md`.
+Paste each field into the Devpost "Enter a submission" form. Numbers match `docs/StageSight_report.pdf`.
 
 ## Project name
 StageSight: a river camera that checks its own gauge
@@ -54,7 +54,8 @@ wanted the camera to become a second instrument that can check the first.
   the rule baseline blamed the healthy gauge both times and published the bad camera stage;
   **Claude blamed the camera both times.** In the debris case it noticed the visible marks drop
   from 11 to 7 while both gauges said the river was falling.
-- **90 days of normal operation:** 0 false sensor flags.
+- **90 days of normal operation** (rule planner, 1,863 replayed frames): 0 false sensor flags.
+- **On AWS:** a 15-minute tick takes a median of 6.3 s on Lambda (Graviton); Claude is called only on events.
 
 ### Challenges I ran into
 - My first approach, a self-calibrating waterline detector for any camera, worked on a close
@@ -99,5 +100,6 @@ amazon-eventbridge, usgs-nims, chart.js
 [unlisted YouTube link, ≤ 5 min]
 
 ## Files to upload
-- `docs/REPORT.pdf` (technical report)
-- `docs/architecture.png`
+- `docs/StageSight_report.pdf` (technical report, 5 pages)
+- `docs/figures/architecture.png` (architecture diagram)
+- `docs/figures/pipeline.png` (good gallery image)

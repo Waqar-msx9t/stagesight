@@ -124,7 +124,7 @@ $("upload").addEventListener("change", async e => {
  const r = await fetch(C.api + "/measure", {method: "POST", body: f});
  $("measure").textContent = JSON.stringify(await r.json(), null, 1);
 });
-refresh(); setInterval(refresh, 3000);
+refresh(); setInterval(refresh, 30000);   // data changes every 15 min
 </script>
 </body>
 </html>

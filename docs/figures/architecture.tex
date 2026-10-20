@@ -1,0 +1,68 @@
+% StageSight architecture. Build: pdflatex architecture.tex (from docs/figures). Icons: AWS Architecture Icons.
+\documentclass[tikz,border=4pt]{standalone}
+\usepackage{newtxtext}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
+\definecolor{aws}{HTML}{ED7100}
+\definecolor{ink}{HTML}{232F3E}
+\definecolor{cam}{HTML}{0C5DA5}
+\definecolor{grp}{HTML}{7D8998}
+\tikzset{
+  svc/.style={inner sep=0pt},
+  lbl/.style={font=\footnotesize\bfseries, text=ink, align=center},
+  sub/.style={font=\scriptsize, text=ink!75, align=center},
+  flow/.style={-{Stealth[length=5pt]}, line width=0.8pt, draw=ink},
+  dflow/.style={flow, dashed},
+  num/.style={circle, fill=aws, text=white, font=\scriptsize\bfseries, inner sep=1.2pt, minimum size=11pt},
+  group/.style={draw=#1, line width=0.8pt, rounded corners=2pt, inner sep=9pt},
+}
+\newcommand{\icon}[3]{\node[svc] (#1) at #2 {\includegraphics[width=1.05cm]{../icons/#3}};}
+\begin{document}
+\begin{tikzpicture}
+  % public data
+  \icon{camn}{(0,1.25)}{multimedia.png}
+  \node[lbl, below=1pt of camn] (caml) {USGS NIMS camera};
+  \node[sub, below=0pt of caml] {hourly frames};
+  \icon{data}{(0,-1.35)}{internet-alt2.png}
+  \node[lbl, below=1pt of data] (datal) {USGS gauges, NWS};
+  \node[sub, below=0pt of datal] {stage, flood levels};
+
+  % AWS
+  \icon{eb}{(3.6,1.25)}{eventbridge.png}
+  \node[lbl, below=1pt of eb] (ebl) {EventBridge};
+  \node[sub, below=0pt of ebl] (ebs) {every 15 min};
+  \icon{ls}{(3.6,-1.35)}{lambda.png}
+  \node[lbl, below=1pt of ls] (lsl) {Lambda: reader};
+  \node[sub, below=0pt of lsl] (lss) {OpenCV 5 + event check\\Graviton arm64};
+  \icon{br}{(7.4,1.25)}{bedrock.png}
+  \node[lbl, right=4pt of br, yshift=6pt, align=left] (brl) {Amazon Bedrock};
+  \node[sub, below=0pt of brl.south west, anchor=north west, align=left] (brs) {Claude agent with tools,\\called only on events};
+  \icon{s3}{(7.4,-1.35)}{s3.png}
+  \node[lbl, below=1pt of s3] (s3l) {Amazon S3};
+  \node[sub, below=0pt of s3l] (s3s) {results, approval queue};
+  \icon{la}{(11.0,-1.35)}{lambda.png}
+  \node[lbl, below=1pt of la] (lal) {Lambda: API};
+  \node[sub, below=0pt of lal] (las) {Function URL, dashboard};
+
+  % operator
+  \icon{op}{(14.2,-1.35)}{user.png}
+  \node[lbl, below=1pt of op] (opl) {Operator};
+  \node[sub, below=0pt of opl] (ops) {approves flags, alerts};
+
+  \begin{scope}[on background layer]
+    \node[group=aws, fit=(eb)(ebs)(ls)(lss)(br)(brs)(s3)(s3s)(la)(las)] (cloud) {};
+    \node[group=grp, fit=(camn)(data)(datal), dashed] (pub) {};
+  \end{scope}
+  \node[anchor=north west, font=\scriptsize\bfseries, text=aws] at (cloud.north west) {AWS Cloud, us-east-2};
+  \node[anchor=north west, font=\scriptsize\bfseries, text=grp] at (pub.north west) {Public data};
+
+  % flow
+  \draw[flow] (ebs.south) -- node[num, right=3pt]{1} (ls.north);
+  \draw[flow] (camn.east) -- (2.15,1.25) |- ($(ls.west)+(0,0.18)$) node[num, pos=0.25, right=2pt]{2};
+  \draw[flow] (data.east) -- ($(ls.west)+(0,-0.18)$);
+  \draw[flow] ($(ls.east)+(0,0.35)$) -- node[num, above left=0pt]{3} ($(br.west)+(0,-0.1)$);
+  \draw[dflow] ($(br.west)+(0.1,-0.42)$) -- node[sub, below right=-3pt, pos=0.45]{actions} ($(ls.east)+(0.1,0.05)$);
+  \draw[flow] ($(ls.east)+(0,-0.25)$) -- node[num, below=3pt]{4} ($(s3.west)+(0,-0.25)$);
+  \draw[flow] (s3) -- node[num, above=2pt]{5} (la);
+  \draw[flow, {Stealth[length=5pt]}-{Stealth[length=5pt]}] (la) -- node[num, above=2pt]{6} (op);
+\end{tikzpicture}
+\end{document}

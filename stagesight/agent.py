@@ -204,9 +204,7 @@ class ClaudePlanner:
     def __init__(self, backend: str | None = None, model: str | None = None, max_steps: int = 8):
         backend = backend or os.environ.get("AGENT_BACKEND", "bedrock")
         if backend == "bedrock":
-            # Bedrock runtime with a cross-region inference profile. Claude Opus 4.6 is the most
-            # capable Claude this new account can call today; set AGENT_MODEL to
-            # global.anthropic.claude-opus-5-5 once AWS enables it.
+            # Bedrock runtime with a cross-region inference profile; AGENT_MODEL selects the model.
             from anthropic import AnthropicBedrock
             self.client = AnthropicBedrock(   # new accounts have low request quotas: retry patiently
                 aws_region=os.environ.get("BEDROCK_REGION", os.environ.get("AWS_REGION", "us-east-1")),

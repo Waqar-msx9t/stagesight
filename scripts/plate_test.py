@@ -23,7 +23,6 @@ def main():
     ap.add_argument("--reference", required=True)
     ap.add_argument("--test-start", required=True)
     ap.add_argument("--test-end", required=True)
-    ap.add_argument("--method", default="bars", choices=["bars", "both", "water"])
     ap.add_argument("--ocr-model", default="models/crnn_en.onnx")
     ap.add_argument("--out", default="results/plate")
     a = ap.parse_args()
@@ -61,7 +60,7 @@ def main():
         if img is None or np.isnan(stage[i]):
             status.append("skipped")
             continue
-        m = plate.read_bars(img, P, bars, reg=reg) if a.method == "bars" else plate.read(img, P, method=a.method)
+        m = plate.read_bars(img, P, bars, reg=reg)
         status.append(m["status"])
         if m["units"] is not None:
             units[i] = m["units"]
