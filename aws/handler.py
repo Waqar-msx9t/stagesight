@@ -11,6 +11,7 @@ Environment: STORE=s3:<bucket>, SITE_DIR (default /var/task/sites/hancock), UPST
              AGENT_BACKEND=bedrock|rules, AGENT_MODEL (default global.anthropic.claude-opus-4-6-v1).
 """
 import base64
+import binascii
 import hmac
 import json
 import os
@@ -70,7 +71,10 @@ def api(event, context):
     http = event.get("requestContext", {}).get("http", {})
     method, path = http.get("method", "GET"), event.get("rawPath", "/latest")
     raw = event.get("body") or ""
-    data = base64.b64decode(raw) if event.get("isBase64Encoded") else raw.encode("utf-8")
+    try:
+        data = base64.b64decode(raw) if event.get("isBase64Encoded") else raw.encode("utf-8")
+    except (binascii.Error, ValueError):
+        return _resp(400, json.dumps({"error": "body is not valid base64"}), "application/json")
     # the dashboard is served from here too, so the S3 bucket stays private
     if method == "GET" and path in ("/", "/index.html"):
         return _resp(200, open(WEB, encoding="utf-8").read(), "text/html; charset=utf-8")

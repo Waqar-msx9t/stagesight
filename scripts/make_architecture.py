@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import scienceplots  # noqa: F401
-from matplotlib.patches import FancyArrowPatch, Rectangle
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
 
 sys.path.insert(0, os.path.dirname(__file__))
 import figcheck  # noqa: E402
@@ -29,6 +29,18 @@ S = 0.46                                     # icon half-size (data units)
 
 def icon(ax, name: str, x: float, y: float) -> None:
     ax.imshow(plt.imread(os.path.join(ICONS, name)), extent=(x - S, x + S, y - S, y + S), zorder=3)
+
+
+def ec2_icon(ax, x: float, y: float) -> None:
+    """EC2 in the AWS icon style (orange tile, white chip); the icon set in docs/icons has no EC2 file."""
+    ax.add_patch(FancyBboxPatch((x - S, y - S), 2 * S, 2 * S, boxstyle="round,pad=0,rounding_size=0.06",
+                                fc=BADGE, ec="none", zorder=3))
+    c = 0.2
+    ax.add_patch(Rectangle((x - c, y - c), 2 * c, 2 * c, fill=False, ec="white", lw=1.1, zorder=4))
+    for t in (-0.1, 0.0, 0.1):
+        for a, b in (((x + t, y + c), (x + t, y + c + 0.1)), ((x + t, y - c), (x + t, y - c - 0.1)),
+                     ((x - c, y + t), (x - c - 0.1, y + t)), ((x + c, y + t), (x + c + 0.1, y + t))):
+            ax.plot(*zip(a, b), color="white", lw=0.9, zorder=4, solid_capstyle="butt")
 
 
 def caption(ax, x: float, y: float, title: str, sub: str, ha: str = "center") -> None:
@@ -70,6 +82,14 @@ def main() -> None:
     group(ax, 3.7, 0.0, 13.8, 5.75, REGION, "Region us-east-2")
     group(ax, 8.45, 6.15, 13.8, 8.7, REGION, "Region us-east-1 (global profile)")
 
+    group(ax, 3.7, 6.15, 7.3, 8.35, BADGE, "One-off, per new site")
+    ec2_icon(ax, 4.3, 7.15)
+    ax.text(4.88, 7.65, "EC2 Graviton4", ha="left", va="top", fontsize=8.6, fontweight="bold", color=INK)
+    ax.text(4.88, 7.27, "COOL 3.1 batch:\narchive in 4.1 s", ha="left", va="top", fontsize=8, color=SUB,
+            linespacing=1.15)
+    arrow(ax, [(2.0, 5.62), (2.0, 7.15), (3.8, 7.15)], dashed=True)          # archive, once
+    ax.text(2.1, 7.25, "archive", ha="left", va="bottom", fontsize=8, color=SUB)
+
     icon(ax, "multimedia.png", 1.65, 5.15)
     caption(ax, 1.65, 4.55, "USGS NIMS camera", "new frame hourly")
     icon(ax, "internet-alt2.png", 1.65, 2.0)
@@ -95,7 +115,7 @@ def main() -> None:
     badge(ax, 2.85, 2.35, 2)
     arrow(ax, [(6.2, 2.3), (7.65, 2.3), (7.65, 7.5), (8.8, 7.5)])            # 3 event + tool results
     arrow(ax, [(8.8, 7.15), (8.2, 7.15), (8.2, 2.0), (6.2, 2.0)], dashed=True)    # tool calls back
-    badge(ax, 7.35, 6.6, 3)
+    badge(ax, 8.05, 7.95, 3)
     ax.text(7.42, 4.4, "event, tool results", rotation=90, ha="center", va="center", fontsize=8, color=SUB)
     ax.text(8.42, 4.4, "tool calls, actions", rotation=90, ha="left", va="center", fontsize=8, color=SUB)
     arrow(ax, [(6.2, 1.72), (8.85, 1.72)])                                    # 4 write

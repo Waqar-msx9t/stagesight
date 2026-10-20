@@ -113,6 +113,9 @@ def test_api_rejects_bad_requests(api):
     assert api("POST", "/approve", b'{"id":"x"}', auth)[0] == 400                              # no silent reject
     assert api("POST", "/approve", b'{"id":"x","decision":"approve"}', {"Authorization": "Bearer \xe9"})[0] == 401
     assert api("POST", "/measure", b"")[0] == 400
+    import handler
+    bad = {"requestContext": {"http": {"method": "POST"}}, "rawPath": "/measure", "body": "abc", "isBase64Encoded": True}
+    assert handler.api(bad, None)["statusCode"] == 400                                        # broken base64
     assert api("GET", "/data/../state.json")[0] == 404
     assert api("GET", "/replay/../../handler.py")[0] == 404
     assert json.loads(api("GET", "/data/events.json")[1]) == []                                 # empty, not 404

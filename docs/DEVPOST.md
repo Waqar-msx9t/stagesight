@@ -19,6 +19,15 @@ OpenCV 5 reads flood stage off public USGS staff-plate cameras with no gauge dat
 
 ## About the project
 
+**In short**
+- OpenCV 5 reads river stage off a USGS staff-plate camera with **no gauge data**: 0.26 ft RMSE
+  through the 29 July 2026 flood (29 of 30 frames within 0.5 ft), where a fitted pixel regression
+  is off by 6.3 ft.
+- When camera and gauge disagree, a Claude agent on Amazon Bedrock re-runs the OpenCV reader and
+  decides which instrument is wrong. In both simulated camera faults the fixed rules blamed the
+  healthy gauge; Claude blamed the camera in 3 of 3 runs.
+- It runs live on AWS Lambda every 15 minutes, and nothing leaves it until a person approves.
+
 ### Inspiration
 I study floods as a PhD student in civil engineering. A river gauge reports stage from one
 pressure sensor. When that sensor fouls, freezes or goes silent, often in the storm it exists
@@ -113,8 +122,7 @@ NIMS plate cameras.
 ### Responsible use
 StageSight is a decision aid, not an official warning system. It uses public USGS and NWS data
 only, sends nothing until a person approves it (then by SNS e-mail; live approvals need an operator
-token), and
-labels a camera stage provisional whenever it stands in for the gauge.
+token), and labels a camera stage provisional whenever it stands in for the gauge.
 
 ### Special awards
 - **Best Use of COOL:** the archive batch runs on EC2 Graviton4 with COOL 3.1 (cv2 loaded from
@@ -138,6 +146,19 @@ Muhammad Waqar Saleem (solo): computer vision, agent, AWS deployment, evaluation
 ## Try it out links
 - Live dashboard and flood replay: https://zkdbpwl26gqzom5j3osjaoi4dy0htqoq.lambda-url.us-east-2.on.aws/
 - Code: https://github.com/Waqar-msx9t/stagesight
+
+## How to test (paste into "Testing instructions" if the form has it; else end of About)
+1. Open the live dashboard. At night or low water it opens the replay of the 29 July 2026 flood;
+   `?mode=live` shows the latest real camera frame read on AWS Lambda.
+2. In the replay, pick a scenario (for example "Gauge frozen for 10 h" or "Debris covers the plate")
+   and press the chips under the time bar to jump to each agent action. The Agent loop panel shows
+   the tools Claude called; the decision log has its full reasoning.
+3. Approve or Reject in the replay is local only and sends nothing. Live approvals need the
+   operator token, so judges see the live queue read-only.
+4. "Try the reader": download the sample flood frame from the same panel, or any full 1080x1920 frame
+   of the Hancock staff camera from USGS NIMS, and upload it; Lambda returns the stage it read.
+5. Offline: `pytest -q` in a fresh clone runs the reader on two real flood frames (README, "Check it
+   in 10 minutes").
 
 ## Video demo link
 [unlisted YouTube link, 5 min or less]

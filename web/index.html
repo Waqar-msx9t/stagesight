@@ -9,8 +9,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' rx='7' fill='%230e7490'/%3E%3Cpath d='M9 6v16M9 8h4M9 12h3M9 16h4M9 20h3' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
-:root{--bg:#f3f5f8;--surface:#ffffff;--sunk:#f7f9fb;--ink:#0f1a2a;--ink2:#566273;--ink3:#7b8696;--line:#e2e7ee;
- --gauge:#2563eb;--camera:#e8590c;--true:#64748b;--ok:#15803d;--warn:#b45309;--bad:#c02626;
+:root{--bg:#f3f5f8;--surface:#ffffff;--sunk:#f7f9fb;--ink:#0f1a2a;--ink2:#4f5b6b;--ink3:#5f6b7a;--line:#e2e7ee;
+ --gauge:#2563eb;--camera:#e8590c;--true:#64748b;--ok:#15803d;--warn:#9a4a07;--bad:#c02626;
  --accent:#0e7490;--accent-ink:#ffffff;--shadow:0 1px 2px rgba(15,26,42,.05),0 2px 8px rgba(15,26,42,.04)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1119;--surface:#121b26;--sunk:#0e1620;--ink:#e7edf4;
  --ink2:#9aa7b7;--ink3:#7d8a9b;--line:#223041;--gauge:#5b93f5;--camera:#f47a2c;--true:#94a3b8;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;
@@ -35,7 +35,7 @@ header h1{font-size:18px;margin:0;letter-spacing:-.01em}
 .banner.on{display:block}
 .banner .wrap{display:grid;grid-template-columns:auto auto auto 1fr auto;gap:10px 14px;align-items:center;padding-top:10px;padding-bottom:10px}
 .badge{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 7px}
-.banner select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);max-width:340px}
+.banner select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--ink3);background:var(--surface);color:var(--ink);max-width:340px}
 .banner input[type=range]{width:100%;accent-color:var(--accent)}
 #play{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;min-width:84px}
 #rtime{font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
@@ -53,9 +53,10 @@ header h1{font-size:18px;margin:0;letter-spacing:-.01em}
 main{display:grid;gap:16px;padding:16px 0 8px;grid-template-columns:minmax(260px,330px) minmax(0,1fr) minmax(300px,400px);align-items:start}
 .col{display:flex;flex-direction:column;gap:16px;min-width:0}
 .reader{grid-column:1/-1}
-@media(max-width:1180px){main{grid-template-columns:minmax(240px,320px) minmax(0,1fr)} .col.side{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;align-items:start}}
+@media(max-width:1180px){.how{display:none} main{grid-template-columns:minmax(250px,330px) minmax(0,1fr)} .frame{grid-column:1;grid-row:1}
+ .col.mid{grid-column:2;grid-row:1/3} .col.side{grid-column:1;grid-row:2}}
 @media(max-width:760px){main{grid-template-columns:1fr} .col,.col.side{display:contents}
- .frame{order:1}.kpi{order:2}.approvals-card{order:3}.chart-card{order:4}.log-card{order:5}.reader{order:6}
+ .frame{order:1}.kpi{order:2}.flow-card{order:3}.approvals-card{order:4}.chart-card{order:5}.log-card{order:6}.reader{order:7}
  .frame img{max-height:60vh} .banner{position:static} .banner .wrap{display:flex;flex-wrap:wrap} .banner .desc{display:none}
  .banner label{flex:1 1 0;min-width:0} .banner select{width:100%;max-width:none} #scrub{flex-basis:100%} .story{flex-basis:100%}}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);min-width:0}
@@ -72,7 +73,7 @@ main{display:grid;gap:16px;padding:16px 0 8px;grid-template-columns:minmax(260px
 .tile .k{font-size:12px;color:var(--ink2);font-weight:550}
 .tile .v{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:4px 0 2px;line-height:1.15}
 .tile .v.word{font-size:19px;letter-spacing:-.01em}
-.tile .n{font-size:12px;color:var(--ink2);line-height:1.4}
+.tile .n{font-size:12px;color:var(--ink2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .tile.suspect{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,var(--surface))}
 .tile{position:relative}.tile.suspect::after{content:"suspect";position:absolute;top:-8px;right:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--bad);color:var(--surface);border-radius:999px;padding:1px 7px}
 .pill{display:inline-flex;align-items:center;gap:6px;font-weight:650;font-size:15px;padding:2px 12px;border-radius:999px;
@@ -86,7 +87,7 @@ details.step summary{cursor:pointer;color:var(--ink2)} details.step .md{margin:4
 .appr{display:grid;grid-template-columns:1fr;gap:8px 12px;align-items:start;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px}
 .appr .msg{min-width:0;color:var(--ink2)} .appr .msg b{color:var(--ink)}
 .appr .btns{display:flex;gap:6px}
-.appr.done{opacity:.6}
+.appr.done{background:transparent;border-style:dashed} .appr.done .msg p{-webkit-line-clamp:1}
 .appr button[data-d="approve"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 #approvals{max-height:430px;overflow:auto}
 .log-card .log{max-height:380px}
@@ -111,7 +112,7 @@ table{border-collapse:collapse;width:100%;font-size:13px} th,td{text-align:left;
 .status small{display:block;margin:2px 0 0 20px;font-size:12.5px;font-weight:450;color:var(--ink2)}
 .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:6px;padding:1px 7px;margin-right:6px;vertical-align:1px;
  color:var(--c);background:color-mix(in srgb,var(--c) 13%,transparent)}
-.tag{--c:var(--ink3)} .tag.flood{--c:var(--bad)} .tag.action{--c:var(--warn)} .tag.flag{--c:var(--gauge)} .tag.cam{--c:var(--camera)}
+.tag{--c:var(--ink3);color:color-mix(in srgb,var(--c) 72%,var(--ink))} .tag.flood{--c:var(--bad)} .tag.action{--c:var(--warn)} .tag.flag{--c:var(--gauge)} .tag.cam{--c:var(--camera)}
 .appr .msg p{margin:4px 0 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
 .appr .msg p.open{-webkit-line-clamp:unset}
 .appr .meta{font-size:12px;color:var(--ink3)}
@@ -127,38 +128,42 @@ table{border-collapse:collapse;width:100%;font-size:13px} th,td{text-align:left;
 .decision b{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .hero{display:grid;grid-template-columns:190px minmax(0,1fr);gap:16px;align-items:stretch}
 .hero .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-@media(max-width:560px){.hero{grid-template-columns:1fr} .meter{height:240px} .meter .area,.meter .names{justify-content:center;padding-right:0;right:0}}
+@media(max-width:560px){.hero{grid-template-columns:1fr} .meter{height:240px} .meter .area{padding-left:40px} .meter .names{left:74px}}
 .meter{position:relative;height:300px;padding:10px 0 26px 30px;background:var(--sunk);border:1px solid var(--line);border-radius:12px}
-.meter .area{position:relative;height:100%;display:flex;gap:14px;justify-content:flex-end;padding-right:12px}
+.meter .area{position:relative;height:100%;display:flex;gap:14px;justify-content:flex-start;padding-left:4px}
 .meter .tick{position:absolute;left:-28px;width:24px;text-align:right;font-size:10.5px;color:var(--ink3);transform:translateY(50%);font-variant-numeric:tabular-nums}
 .meter .thr{position:absolute;left:-4px;right:-6px;border-top:1.5px dashed var(--c);z-index:2}
-.meter .thr span{position:absolute;left:4px;top:-14px;background:var(--sunk);padding:0 3px;border-radius:4px;font-size:10px;font-weight:700;color:var(--c);letter-spacing:.03em}
-.tube{position:relative;width:46px;height:100%;border-radius:10px;background:var(--surface);border:1px solid var(--line);overflow:hidden}
+.meter .thr span{position:absolute;right:2px;top:-14px;background:var(--sunk);padding:0 3px;border-radius:4px;font-size:10px;font-weight:700;color:var(--c);letter-spacing:.03em}
+.tube{position:relative;width:46px;height:100%;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.tube .fill{border-radius:0 0 9px 9px}
 .tube .fill{position:absolute;left:0;right:0;bottom:0;height:0;transition:height .9s cubic-bezier(.3,.7,.2,1);
  background:linear-gradient(180deg,color-mix(in srgb,var(--c) 85%,white) 0,var(--c) 100%)}
 .tube .fill::before{content:"";position:absolute;left:0;right:0;top:-3px;height:6px;border-radius:50%;background:color-mix(in srgb,var(--c) 60%,white);animation:wave 2.4s ease-in-out infinite}
 @keyframes wave{50%{transform:scaleX(.82) translateY(1px)}}
 .tube.cam{--c:var(--camera)} .tube.gauge{--c:var(--gauge)}
-.tube.below .fill{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--c) 35%,transparent) 0 5px,transparent 5px 10px)}
+.tube.below .fill{background:none;border-top:2px dashed var(--c);border-radius:0} .tube.below .fill::before{display:none}
 .tube.none .fill{height:0!important}
 .tube.suspect{border:2px solid var(--bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 18%,transparent)}
 .tube.suspect .fill{background:repeating-linear-gradient(135deg,var(--c) 0 6px,color-mix(in srgb,var(--c) 55%,var(--surface)) 6px 12px)}
 .tube .val{position:absolute;left:50%;transform:translate(-50%,-100%);font-size:11.5px;font-weight:700;white-space:nowrap;color:var(--ink);
  background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:0 4px;transition:bottom .9s cubic-bezier(.3,.7,.2,1);z-index:3;margin-top:-4px}
-.meter .names{position:absolute;bottom:4px;left:30px;right:12px;display:flex;gap:14px;justify-content:flex-end;font-size:11px;font-weight:650;color:var(--ink2)}
+.meter .names{position:absolute;bottom:4px;left:34px;right:0;display:flex;gap:14px;justify-content:flex-start;font-size:11px;font-weight:650;color:var(--ink2)}
 .meter .names span{width:46px;text-align:center}
 .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;margin:2px 0 8px}
 .node{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--sunk);font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap}
-.node .ic{width:20px;height:20px;border-radius:6px;display:inline-grid;place-items:center;font-size:11px;font-weight:800;background:var(--c,var(--ink3));color:var(--surface)}
+.node .ic{width:20px;height:20px;border-radius:6px;display:inline-grid;place-items:center;font-size:11px;font-weight:800;background:color-mix(in srgb,var(--c,var(--ink3)) 80%,#000);color:#fff}
 .node.ev{--c:var(--camera)} .node.call{--c:var(--accent)} .node.act{--c:var(--accent)} .node.act.flood{--c:var(--bad)} .node.act.action{--c:var(--warn)} .node.act.cam{--c:var(--camera)} .node.act.flag{--c:var(--gauge)}
 .node.human{--c:var(--warn)} .node.sns{--c:var(--ok)} .node.idle{--c:var(--ink3);font-weight:500;color:var(--ink2)}
-.node.dim{opacity:.45}
+.node.dim{border-style:dashed;background:transparent;color:var(--ink2);font-weight:500} .node.dim .ic{background:var(--ink3)}
 .link{width:18px;height:2px;background:var(--line);position:relative;flex:none}
 .link::after{content:"";position:absolute;right:-1px;top:-3px;border:4px solid transparent;border-left-color:var(--line)}
 .flow.anim .node,.flow.anim .link{animation:pop .45s both;animation-delay:calc(var(--i) * 260ms)}
 @keyframes pop{from{opacity:0;transform:translateY(4px) scale(.96)}}
 .flow.anim .node{box-shadow:0 0 0 0 var(--c)} .flow.anim .node:last-of-type{animation:pop .45s both,glow 1.6s 2 ease-out;animation-delay:calc(var(--i) * 260ms)}
 @keyframes glow{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 45%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+.status.catch{color:var(--bad);border-left-width:8px;animation:catch 1s 3}
+@keyframes catch{50%{background:color-mix(in srgb,var(--bad) 14%,var(--surface))}}
+.tile.suspect.new{animation:catch 1s 3}
 #flow-note{margin:0;font-size:13px;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mode-dot{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:999px;padding:2px 9px}
 .mode-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c);animation:pulse 1.6s infinite}
@@ -209,7 +214,7 @@ footer{padding:8px 20px 28px;color:var(--ink3);font-size:12.5px;max-width:1480px
    <div class="tile"><div class="k">NWS alert level</div><div class="v"><span id="level" class="pill">–</span></div><div class="n" id="levels"></div></div>
    <div class="tile"><div class="k">Agent</div><div class="v word" id="events">–</div><div class="n" id="planner"></div></div>
   </div></div></div></section>
- <section class="card"><h2>Agent loop · latest event</h2><div class="flow" id="flow"></div><p id="flow-note"></p></section>
+ <section class="card flow-card"><h2>Agent loop · latest event</h2><div class="flow" id="flow"></div><p id="flow-note"></p></section>
  <section class="card chart-card"><h2>Camera vs gauge</h2><div class="chart-box"><canvas id="chart" role="img" aria-label="Stage over time: camera reading, USGS gauge, and NWS action and flood stages"></canvas></div>
   <details><summary class="sub">Table view</summary><div id="table" class="log"></div></details></section>
  </div>
@@ -232,7 +237,7 @@ const C = window.STAGESIGHT || {data: "", api: ""};
 const $ = id => document.getElementById(id);
 const ft = v => v == null ? "–" : v.toFixed(2) + " ft";
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const getJ = u => fetch(u).then(r => r.ok ? r.json() : null).catch(() => null);
 const when = t => { if(!t) return ""; const d = new Date(t.slice(0,19) + "Z");
   return d.toLocaleString("en-US", {timeZone: "America/New_York", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false}) + " ET (" + t.slice(11,16) + " UTC)"; };
@@ -258,6 +263,8 @@ function summary(s){
  return esc(line.length > 140 ? line.slice(0, 137) + "…" : line);
 }
 
+// rebuild a panel only when its content changes, so focus and open <details> survive playback
+const setHTML = (el, h) => { if(el._h !== h){ el.innerHTML = h; el._h = h; } };
 const LO = 8, HI = 20, pct = x => Math.max(0, Math.min(100, (x - LO) / (HI - LO) * 100));
 function meter(v){
  const el = $("meter"), c = v.camera || {};
@@ -271,7 +278,7 @@ function meter(v){
  const cam = c.stage_ft ?? (c.status === "below_plate" ? c.below_ft : null);
  const set = (k, val, txt, cls) => { const t = $("tube-" + k);
   t.className = "tube " + k + " " + cls; t.querySelector(".fill").style.height = (val == null ? 0 : pct(val)) + "%";
-  const lab = t.querySelector(".val"); lab.style.bottom = (val == null ? 50 : pct(val)) + "%"; lab.textContent = txt; };
+  const lab = t.querySelector(".val"); lab.style.bottom = (val == null ? 50 : Math.min(pct(val), 93)) + "%"; lab.textContent = txt; };
  set("cam", cam, c.stage_ft != null ? c.stage_ft.toFixed(2) : c.status === "below_plate" ? "< " + c.below_ft.toFixed(1) : "no read",
      (c.stage_ft == null ? (c.status === "below_plate" ? "below" : "none") : "") + (v.camera_flagged ? " suspect" : ""));
  set("gauge", v.gauge_ft, v.gauge_ft != null ? v.gauge_ft.toFixed(2) : "silent", (v.gauge_ft == null ? "none suspect" : v.gauge_flagged ? "suspect" : ""));
@@ -281,7 +288,7 @@ function flow(v){
  const e = v.log.at(-1), el = $("flow");
  if(!e){ el.className = "flow"; el.innerHTML = `<span class="node idle"><span class="ic">●</span>Watching: OpenCV reads every frame; Claude is called only on an event</span>`; $("flow-note").textContent = ""; S.flowKey = null; return; }
  const acts = e.trace.filter(x => ACT[x.tool]), pend = v.approvals.some(a => a.status === "pending_approval" && !S.decided[a.id] && !a.expired);
- const sent = v.approvals.some(a => /approved/.test(S.decided[a.id] || a.status || ""));
+ const sent = v.approvals.some(a => a.status === "approved");          // replay approvals send nothing
  const nodes = [`<span class="node ev"><span class="ic">!</span>${esc(kind(e.event.kind))}</span>`]
   .concat(e.trace.filter(x => x.tool && !ACT[x.tool]).map(x => `<span class="node call"><span class="ic">⟲</span>${esc(TOOL[x.tool] || x.tool)}</span>`))
   .concat(acts.map(x => `<span class="node act ${tagOf(x)}"><span class="ic">✓</span>${esc(ACT[x.tool](x.input))}</span>`))
@@ -296,6 +303,9 @@ function flow(v){
 function render(v){
  const c = v.camera || {};
  $("frame").src = v.img;
+ $("frame").alt = "Camera frame with the reader overlay. " + (c.stage_ft != null ? `Reader: ${ft(c.stage_ft)}, ${c.marks_visible} of ${c.marks_total} marks visible.`
+   : c.status === "below_plate" ? "Water is below the lowest mark." : "No plate marks readable.");
+ $("where2").textContent = S.mode === "live" ? "live, newest frame" : "29 July 2026 flood replay";
  const readable = c.status === "ok" || c.status === "below_plate";
  $("legend").innerHTML = readable ? '<span><i class="sw" style="background:#3cc83c"></i>mark visible</span><span><i class="sw" style="background:#c83cc8"></i>under water</span><span><i class="sw" style="background:#ffdc00"></i>waterline</span>'
    : c.status === "unreadable" ? "No plate marks detectable in this frame (night infrared, fog or spray), so the reader gives no number." : "";
@@ -324,8 +334,12 @@ function render(v){
  $("status").className = "status " + lvl;
  $("status").innerHTML = `${lvl.toUpperCase()} <span>· ` + (v.gauge_flagged ? "Gauge flagged, the camera stands in"
    : v.camera_flagged ? "Camera flagged, the gauge is trusted" : v.gauge_ft == null ? "Gauge silent, the camera stands in"
+   : c.stage_ft == null ? `Gauge trusted; the camera has no reading (${c.status === "below_plate" ? "water below the plate" : "marks not visible"})`
    : "Camera and gauge agree") + ` · ${waiting} item${waiting === 1 ? "" : "s"} awaiting approval</span>`
    + (v.story ? `<small>${esc(v.story)}</small>` : "");
+ $("status").classList.toggle("catch", !!v.caught);
+ if(v.caught) $("status").innerHTML = `Agent caught a faulty ${v.caught.suspect === "camera" ? "camera" : "gauge"} <span>· ${esc(v.caught.why)}</span>`;
+ for(const id of ["cam-tile", "gauge-tile"]) $(id).classList.toggle("new", !!v.caught);
  $("appr-n").hidden = !waiting; $("appr-n").textContent = waiting;
  meter(v); flow(v);
  const first = v.series.findIndex(x => x.camera_ft != null);
@@ -354,29 +368,34 @@ function render(v){
  const fa = v.fault ? s.findIndex(x => x.t && x.t >= v.fault[0]) : -1;
  let fb = v.fault ? s.findLastIndex(x => x.t && x.t <= v.fault[1]) : -1;
  S.band = fa >= 0 && fb >= fa ? [fa, fb, v.faultLabel] : null;
+ S.mark = v.flagT ? s.findIndex(x => x.t === v.flagT) : -1;
  if(chart){chart.data = data; chart.options = opts; chart.update();} else chart = new Chart($("chart"), {type: "line", data, options: opts, plugins: [{id: "band", beforeDatasetsDraw(c){
    if(!S.band) return; const {ctx, chartArea: a, scales: {x}} = c; const x0 = x.getPixelForValue(S.band[0]) - 6, x1 = x.getPixelForValue(S.band[1]) + 6;
    ctx.save(); ctx.fillStyle = css("--line"); ctx.globalAlpha = .55; ctx.fillRect(x0, a.top, x1 - x0, a.bottom - a.top);
    ctx.globalAlpha = 1; ctx.fillStyle = css("--ink2"); ctx.font = "600 11px " + Chart.defaults.font.family; ctx.textAlign = "right";
-   ctx.fillText("fault: " + S.band[2], x1 - 6, a.top + 14); ctx.restore(); }}]});
+   ctx.fillText("fault: " + S.band[2], x1 - 6, a.top + 14);
+   if(S.mark >= 0){ const xm = x.getPixelForValue(S.mark); ctx.strokeStyle = css("--bad"); ctx.lineWidth = 1.5; ctx.setLineDash([]);
+     ctx.beginPath(); ctx.moveTo(xm, a.top); ctx.lineTo(xm, a.bottom); ctx.stroke(); ctx.fillStyle = css("--bad"); const r = xm > a.right - 140; ctx.textAlign = r ? "right" : "left";
+     ctx.fillText("agent flagged " + S.markWho, xm + (r ? -5 : 5), a.bottom - 8); }
+   ctx.restore(); }}]});
  $("table").innerHTML = "<table><caption class='sub'>Latest 48 readings</caption><tr><th scope='col'>Time</th><th scope='col'>Camera</th><th scope='col'>Gauge</th><th scope='col'>Reader status</th></tr>" +
    s.filter(x => !x.gap).slice(-48).reverse().map(x => `<tr><td>${esc(when(x.t))}</td><td>${ft(x.camera_ft)}</td><td>${ft(x.gauge_ft)}</td><td>${esc((x.status||"").replace(/_/g," "))}</td></tr>`).join("") + "</table>";
- $("log").innerHTML = v.log.length ? v.log.slice().reverse().map((e, k) => `<details class="tl ${esc(e.event.kind)}"${k ? "" : " open"}>
+ setHTML($("log"), v.log.length ? v.log.slice().reverse().map((e, k) => `<details class="tl ${esc(e.event.kind)}"${k ? "" : " open"}>
    <summary><span class="t">${esc(when(e.time_utc))} · ${e.planner === "claude" ? "Claude" : "rule planner"}</span><b>${esc(kind(e.event.kind))}</b>
    <div class="acts">${e.trace.filter(x => ACT[x.tool]).map(x => `<span class="tag ${tagOf(x)}">${esc(ACT[x.tool](x.input))}</span>`).join("") || '<span class="t">no action</span>'}</div></summary>
-   ${e.trace.map(x => ACT[x.tool] ? `<div class="decision"><b>${esc(x.tool)}</b> ${esc(x.input.reason || x.input.evidence || x.input.message || "")}</div>`
+   ${e.trace.map(x => ACT[x.tool] ? `<div class="decision" tabindex="0"><b>${esc(x.tool)}</b> ${esc(x.input.reason || x.input.evidence || x.input.message || "")}</div>`
        : x.tool ? `<span class="tool">${esc(x.tool)}(${esc(args(x.input))})</span>`
        : x.thought ? `<details class="step"><summary>${summary(x.thought)}</summary><div class="md">${md(x.thought)}</div></details>`
        : `<div class="step"><i>${esc(x.note || "")}</i></div>`).join("")}</details>`).join("")
    : S.mode === "live" ? "No events in the live feed. The agent runs only when a reading raises an event (a rise to an NWS level, camera and gauge disagreeing, a silent gauge). Watch it work in Replay."
-   : "No events yet at this point of the replay.";
+   : "No events yet at this point of the replay.");
  const pend = v.approvals;
- $("approvals").innerHTML = pend.length ? pend.slice().reverse().map(a => { const d = S.decided[a.id] || (a.expired ? "expired: the river is below this level now" : null) || (a.status !== "pending_approval" ? a.status : null);
+ setHTML($("approvals"), pend.length ? pend.slice().reverse().map(a => { const d = S.decided[a.id] || (a.expired ? (a.type === "flag_sensor" ? "resolved: camera and gauge agree again" : "expired: the river is below this level now") : null) || (a.status !== "pending_approval" ? a.status : null);
    return `<div class="appr${d ? " done" : ""}"><span class="msg">${a.type === "flag_sensor" ? `<span class="tag ${a.suspect === "camera" ? "cam" : "flag"}">Sensor flag</span><b>${a.suspect === "camera" ? "Camera" : "Site gauge"} is wrong</b>` : `<span class="tag ${esc(a.level)}">${esc(a.level)} alert</span><b>Draft NWS ${esc(a.level)} alert</b>`}
-   <div class="meta">${esc(when(a.time_utc))}</div><p title="Click to expand">${esc(a.reason || a.message)}</p></span>
+   <div class="meta">${esc(when(a.time_utc))}</div><p tabindex="0" title="Click or press Enter to expand">${esc(a.reason || a.message)}</p></span>
    ${d ? `<b class="sub">${esc(d)}</b>` : (n => `<span class="btns"><button data-id="${esc(a.id)}" data-d="approve" aria-label="Approve ${n}">Approve</button><button data-id="${esc(a.id)}" data-d="reject" aria-label="Reject ${n}">Reject</button></span>`)(a.type === "flag_sensor" ? "sensor flag" : esc(a.level) + " alert")}</div>`; }).join("")
    + `<p class="sub">Times inside the agent's notes are UTC.</p>`
-   : "Nothing to approve. The agent drafts alerts and sensor flags here; nothing is sent without a person.";
+   : "Nothing to approve. The agent drafts alerts and sensor flags here; nothing is sent without a person.");
 }
 
 // ---- live: the scheduled Lambda's output in S3
@@ -393,7 +412,8 @@ async function liveView(){
 async function showLive(){
  const v = await liveView();
  $("frame-h").textContent = "Latest camera frame";
- if(!v){ $("events").textContent = "Live feed unavailable"; return; }
+ if(!v){ $("events").textContent = "Live feed unavailable"; $("frame").removeAttribute("src");
+   $("status").className = "status normal"; $("status").textContent = "Live feed unavailable right now. Switch to Replay to see the system work."; return; }
  render(v);
  $("frame-h").textContent = "Latest camera frame · " + when((v.series.at(-1) || {}).t).replace(/ \(.*$/, "");
 }
@@ -402,13 +422,21 @@ async function showLive(){
 function replayView(i){
  const R = S.recs.slice(0, i + 1), r = R[R.length - 1];
  const acts = R.flatMap(x => x.actions.map((a, k) => ({...a, id: x.t + "#" + k})));
- const live = a => S.decided[a.id] !== "rejected";                  // a rejected flag no longer counts
+ const tOf = a => a.id.split("#")[0];
+ // a flag holds until two consecutive later frames where camera and gauge agree within 0.5 ft and the gauge
+ // is moving again (a frozen gauge can match a falling river for one frame), or until a person rejects it
+ const agree = x => x.camera.stage_ft != null && x.gauge_ft != null && Math.abs(x.camera.stage_ft - x.gauge_ft) <= 0.5;
+ const cleared = a => R.some((x, k) => k && R[k - 1].t > tOf(a) && agree(x) && agree(R[k - 1]) && x.gauge_ft !== R[k - 1].gauge_ft);
+ const live = a => S.decided[a.id] !== "rejected" && !cleared(a);
  const gaugeFlag = acts.filter(a => a.type === "flag_sensor" && a.suspect === "site_gauge" && live(a)).at(-1);
  const camFlag = acts.filter(a => a.type === "flag_sensor" && a.suspect === "camera" && live(a)).at(-1);
- const prov = acts.filter(a => a.type === "publish_provisional_stage").at(-1);
- const provisional = prov && (gaugeFlag || r.gauge_ft == null) ? prov.stage_ft : null;
- // the stage that sets the alert level: the agent's provisional stage, else the trusted instrument
- const stage = provisional ?? (camFlag ? r.gauge_ft : (r.camera.stage_ft ?? r.gauge_ft));
+ const gaugeOut = !!gaugeFlag || r.gauge_ft == null;
+ const prov = gaugeOut ? acts.filter(a => a.type === "publish_provisional_stage").at(-1) : null;
+ // while the gauge is out, the camera's own reading stands in; the agent's provisional stage covers frames without one
+ const provisional = gaugeOut ? (r.camera.stage_ft ?? prov?.stage_ft ?? null) : null;
+ const stage = gaugeOut ? provisional : camFlag ? r.gauge_ft : (r.camera.stage_ft ?? r.gauge_ft);
+ const flag = r.actions.find(a => a.type === "flag_sensor");
+ const firstFlag = acts.find(a => a.type === "flag_sensor");
  const series = [];
  R.forEach((x, k) => {
   if(k && (new Date(x.t + "Z") - new Date(R[k - 1].t + "Z")) > 2 * 3600e3) series.push({gap: true});   // night
@@ -416,9 +444,11 @@ function replayView(i){
                acted: x.actions.some(a => a.type !== "no_action")});
  });
  const approvals = acts.filter(a => a.type === "flag_sensor" || a.type === "draft_alert")
-   .map(a => ({...a, expired: a.type === "draft_alert" && stage != null && stage < (S.levels[a.level] ?? 0) - 0.5}));
+   .map(a => ({...a, expired: a.type === "draft_alert" ? stage != null && stage < (S.levels[a.level] ?? 0) - 0.5 : cleared(a)}));
+ S.markWho = firstFlag ? (firstFlag.suspect === "camera" ? "camera" : "gauge") : "";
  return {img: "replay/" + r.img, camera: r.camera, gauge_ft: r.gauge_ft, alert_level: level(stage), provisional, story: S.story,
-   fault: S.fault, faultLabel: S.faultLabel,
+   fault: S.fault, faultLabel: S.faultLabel, flagT: firstFlag ? tOf(firstFlag) : null,
+   caught: flag ? {suspect: flag.suspect, why: String(flag.evidence || flag.reason || "").split(/(?<=\.)\s/)[0].slice(0, 160)} : null,
    gauge_flagged: gaugeFlag ? (S.decided[gaugeFlag.id] ? "approved" : "awaiting approval") : null,
    camera_flagged: !!camFlag, events: r.events.map(e => e.event.kind), series,
    log: R.flatMap(x => x.events.map(e => ({time_utc: x.t, ...e}))), approvals};
@@ -432,11 +462,15 @@ function step(i){
 }
 function play(on){
  S.playing = on; $("play").textContent = on ? "Pause" : "Play"; clearInterval(S.timer);
- for(const id of ["cam", "log", "approvals"]) $(id).setAttribute("aria-live", on ? "off" : "polite");
- if(on) S.timer = setInterval(() => { if(S.idx >= S.recs.length - 1) return play(false); step(S.idx + 1); }, 1200);
+ for(const id of ["cam", "log", "approvals", "status"]) $(id).setAttribute("aria-live", on ? "off" : "polite");
+ S.hold = 0;
+ if(on) S.timer = setInterval(() => {
+  if(S.idx >= S.recs.length - 1) return play(false);
+  if(S.recs[S.idx].actions.some(a => a.type === "flag_sensor") && S.hold++ < 3) return;   // pause on the catch
+  S.hold = 0; step(S.idx + 1); }, 1200);
 }
 async function loadScenario(id){
- const d = await getJ("replay/" + id + ".json"); if(!d) return loadScenario("flatline");
+ const d = await getJ("replay/" + id + ".json"); if(!d) return id === "flatline" ? null : loadScenario("flatline");
  S.recs = d.frames; S.decided = {}; $("scrub").max = S.recs.length - 1;
  $("story").textContent = d.fault ? `Injected fault: ${d.label}, from ${when(d.fault[1])}. Watch what the agent does.`
    : "No fault: the 29 July flood as it happened. The agent drafts the NWS alerts.";
@@ -445,8 +479,9 @@ async function loadScenario(id){
  $("jumps").innerHTML = S.recs.map((r, k) => r.actions.some(a => a.type !== "no_action") ?
    `<button data-i="${k}">${esc(when(r.t).split(" ET")[0])}: ${esc(r.actions.filter(a => a.type !== "no_action").map(a =>
      a.type === "flag_sensor" ? "flag " + a.suspect.replace("site_gauge", "gauge") : a.type === "draft_alert" ? a.level + " alert" : "provisional stage").join(", "))}</button>` : "").join("");
- // start a few hours before the first event so the viewer sees the river rise
- const first = S.recs.findIndex(r => r.events.length); step(Math.max(0, first - 4)); play(true);
+ // start shortly before the agent's first flag (else its first event): the catch comes within seconds
+ const fl = S.recs.findIndex(r => r.actions.some(a => a.type === "flag_sensor"));
+ const first = fl >= 0 ? fl - 3 : S.recs.findIndex(r => r.events.length) - 2; step(Math.max(0, first)); play(true);
 }
 
 async function setMode(m){
@@ -491,6 +526,8 @@ $("approvals").addEventListener("click", async e => {
  } catch(err){ alert("The service did not answer; nothing was recorded."); return; }
  showLive();
 });
+for(const id of ["log", "approvals"]) $(id).addEventListener("keydown", e => {
+ if((e.key === "Enter" || e.key === " ") && e.target.matches(".decision,.msg p")){ e.preventDefault(); e.target.classList.toggle("open"); } });
 $("log").addEventListener("click", e => { const d = e.target.closest(".decision"); if(d) d.classList.toggle("open"); });
 $("upload").addEventListener("change", async e => {
  const f = e.target.files[0]; if(!f) return;

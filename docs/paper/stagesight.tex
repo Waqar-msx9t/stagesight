@@ -165,7 +165,8 @@ in which Claude on Bedrock chooses tools and the Lambda executes them; \textcirc
 results and the approval queue go to a private S3 bucket; \textcircled{\scriptsize 5}--\textcircled{\scriptsize 6}
 a second Lambda serves the dashboard, the flood replay and the measure endpoint, and records the
 operator's decisions; \textcircled{\scriptsize 7} an approved flag or alert is e-mailed through
-Amazon SNS, the only path out of the system.}
+Amazon SNS, the only path out of the system. Top left: the one-off batch that re-reads a new site's
+camera archive on EC2 Graviton4 with COOL (Sec.~VI).}
 \label{fig:arch}
 \end{figure*}
 
@@ -226,7 +227,7 @@ c8g.4xlarge reads the whole 90-day archive (\BatchFrames{} frames) in \BatchSeco
 \$\CostArchive{} at on-demand prices (\$\CostPerK{} per 1,000 frames); throughput scales almost
 linearly from \BatchOne{} frames/s with one worker. COOL is 4\% faster in a single process and up to
 4.9$\times$ faster in single kernels, but the batch is bound by NumPy and Python, so both builds tie
-there. COOL's DNN text recognizer aborted with a heap error on c8g.xlarge in every run (2 recorded)
+there. COOL's DNN text recognizer aborted on c8g.xlarge in both recorded runs (no OCR result in either)
 and ran normally on c8g.4xlarge; a minimal reproduction is in \texttt{scripts/cool\_dnn\_repro.py}.
 
 \begin{table}[t]
@@ -308,7 +309,7 @@ UTC). The camera reads during the two high-water periods; otherwise the water is
 plate (light) or it is night (dark).}
 \label{fig:coverage}
 \end{figure*}
-Over the 1,869 hourly frames of 21~July to 19~October the reader gave a number for 45 (2.4\%,
+Over the 1,863 hourly frames of the 90-day replay (21~July to 18~October) the reader gave a number for 45 (2.4\%,
 Fig.~\ref{fig:coverage}); the water was below the plate for 64\% and 33\% were night or
 obscured. The plate is a flood instrument: it reads when the river is high, which is when a
 gauge fault matters most.

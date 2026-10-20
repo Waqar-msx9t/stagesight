@@ -95,5 +95,12 @@
         "within_0.5": 0.14814814814814814
       }
     }
+  },
+  "plate_ocr_no_gauge_rmse_ci95": {
+    "low": 0.199,
+    "high": 0.313,
+    "n": 30,
+    "resamples": 10000,
+    "seed": 0
   }
 }

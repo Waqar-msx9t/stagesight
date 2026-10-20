@@ -78,6 +78,8 @@ deploy_fn "$FN_TICK" handler.scheduled 1024 300   # peak use 295 MB; network-bou
 deploy_fn "$FN_API" handler.api 1024 30
 # a failed tick must not be retried: retries would repeat model calls and timeseries rows
 $AWS lambda put-function-event-invoke-config --function-name "$FN_TICK" --maximum-retry-attempts 0 >/dev/null
+# the public API runs OpenCV on /measure; cap its concurrency so traffic cannot run up cost
+$AWS lambda put-function-concurrency --function-name "$FN_API" --reserved-concurrent-executions 10 >/dev/null
 
 # 4. public Function URL for the dashboard and API; POST /approve needs the operator token
 if ! $AWS lambda get-function-url-config --function-name "$FN_API" >/dev/null 2>&1; then

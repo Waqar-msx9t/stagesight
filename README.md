@@ -93,6 +93,7 @@ python scripts/flood_stress_test.py --index data/hancock/images.csv --gauge data
     --test-start 2026-07-21 --test-end 2026-08-01 --no-align --out results/hancock_v2      # frame cache
 python scripts/plate_test.py --cache results/hancock_stack.npz --reference sites/hancock/reference.jpg \
     --test-start 2026-07-21 --test-end 2026-08-01 --out results/hancock_plate             # Table III
+python scripts/bootstrap_ci.py                                                           # RMSE 95% interval
 python scripts/replay_agent.py --all --planner rules                                      # rule baseline
 bash scripts/repeat_agent_runs.sh && python scripts/agent_stats.py                        # Table IV (Bedrock)
 python scripts/replay_agent.py --scenario none --start 2026-07-21 --end 2026-10-19 --out results/agent_90d
