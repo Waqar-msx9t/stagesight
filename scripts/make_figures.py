@@ -25,6 +25,9 @@ sys.path.insert(0, ROOT)
 from stagesight import plate as P  # noqa: E402
 from stagesight.reader import SiteReader  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(__file__))
+import figcheck  # noqa: E402
+
 OUT = os.path.join(ROOT, "docs", "figures")
 plt.style.use(["science", "no-latex"])
 plt.rcParams.update({
@@ -40,7 +43,11 @@ FLOOD, ACTION = "#c62828", "#ef6c00"
 FULL_W, COL_W = 7.16, 3.5                  # IEEE two-column widths (in)
 
 
+ISSUES: list[str] = []
+
+
 def _save(fig, name: str) -> None:
+    ISSUES.extend(figcheck.overlaps(fig, name))      # every text, legend and mark measured after drawing
     for ext in ("pdf", "png"):
         fig.savefig(os.path.join(OUT, f"{name}.{ext}"))
     plt.close(fig)
@@ -112,8 +119,8 @@ def pipeline_figure() -> dict:
     c.plot(bt, datum - bu, "o", ms=3, mfc="white", mec=GAUGE, mew=0.7, label="foot marks")
     c.set_xlabel("Position along plate axis $t$ (px)")
     c.set_ylabel("Stage (ft)")
-    c.legend(loc="upper right", frameon=False)
-    c.text(0.04, 0.05, f"fit error {pl['fit_rmse_ft']:.2f} ft", transform=c.transAxes, fontsize=7)
+    c.legend(loc="lower left", frameon=False)
+    c.text(0.96, 0.95, f"fit error {pl['fit_rmse_ft']:.2f} ft", transform=c.transAxes, fontsize=7, ha="right", va="top")
     _label(c, "c")
 
     # (d) flood frame: visible / hidden marks and the waterline
@@ -140,16 +147,16 @@ def pipeline_figure() -> dict:
     con = np.array(raw["contrast"])
     cols = [VIS if v else HID for v in raw["visible"]]
     e.scatter(con, stage_mark, s=9, c=cols, lw=0, zorder=3)
-    e.axvline(8, color=GAUGE, lw=0.6, ls="--")
-    e.axhline(r["stage_ft"], color=WL, lw=1.4)
-    e.axhline(17.61, color=GAUGE, lw=0.7, ls=":")
-    e.text(12, r["stage_ft"] + 0.12, f"camera {r['stage_ft']:.2f}", fontsize=7, ha="left", va="bottom", color="#8a6200")
-    e.text(12, 17.61 - 0.12, "gauge 17.61", fontsize=7, ha="left", va="top")
+    e.axvline(8, color=GAUGE, lw=0.6, ls="--", gid="ref")
+    e.axhline(r["stage_ft"], color=WL, lw=1.4, gid="ref")
+    e.axhline(17.61, color=GAUGE, lw=0.7, ls=":", gid="ref")
+    e.text(12, r["stage_ft"] + 0.12, f"camera {r['stage_ft']:.2f}", fontsize=7, ha="left", va="bottom", color="#8a6200", gid="on-line")
+    e.text(12, 17.61 - 0.12, "gauge 17.61", fontsize=7, ha="left", va="top", gid="on-line")
     e.text(10, min(stage_mark), "threshold", fontsize=7, va="bottom")
     e.set_xlabel(r"Mark contrast $\Delta a^*$ (mark $-$ ring)")
     e.set_ylabel("Stage (ft)")
     e.text(0.97, 0.55, "visible", color=VIS, transform=e.transAxes, ha="right", fontsize=7)
-    e.text(0.16, 0.18, "hidden", color=HID, transform=e.transAxes, ha="left", fontsize=7)
+    e.text(0.24, 0.18, "hidden", color=HID, transform=e.transAxes, ha="left", fontsize=7)
     _label(e, "e")
 
     for ax in (a, b, dd):
@@ -171,20 +178,22 @@ def flood_figure() -> dict:
 
     fig, (a, b) = plt.subplots(1, 2, figsize=(FULL_W, 2.2), gridspec_kw={"width_ratios": [2.4, 1], "wspace": 0.22})
     for lvl, col, ls, txt in ((18, FLOOD, "--", "NWS minor flood (18 ft)"), (14, ACTION, "-.", "NWS action (14 ft)")):
-        a.axhline(lvl, color=col, lw=0.7, ls=ls)
-        a.text(gt[-1], lvl + 0.15, txt, color=col, fontsize=7, ha="right", va="bottom")
+        a.axhline(lvl, color=col, lw=0.7, ls=ls, gid="ref")
+        a.text(_t("2026-07-31T20:00:00"), lvl + 0.15, txt, color=col, fontsize=7, ha="right", va="bottom", gid="on-line")
     a.axhspan(4, 11, color="#000000", alpha=0.04, lw=0)
-    a.axhline(11, color="#777777", lw=0.4)
-    a.text(gt[0], 7.3, "below the plate (< 11 ft):\nno camera reading", fontsize=7, color="#555555")
-    a.plot(gt, gv, color=GAUGE, lw=0.9, label="USGS gauge 01421500")
-    a.plot(t, cam, "o", ms=3, color=CAM, label="StageSight camera (no gauge data)")
-    a.plot(t, lin, "x", ms=3, mew=0.7, color=BASE, label="Linear pixel fit, trained on normal flows")
+    a.axhline(11, color="#777777", lw=0.4, gid="ref")
+    a.text(_t("2026-07-27T21:00:00"), 7.0, "below the plate (< 11 ft):\nno camera reading", fontsize=7, color="#555555")
+    a.plot(gt, gv, color=GAUGE, lw=0.9, label="USGS gauge")
+    a.plot(t, cam, "o", ms=3, color=CAM, label="StageSight camera")
+    a.plot(t, lin, "x", ms=3, mew=0.7, color=BASE, label="linear pixel fit")
     a.set_ylabel("Stage (ft)")
     a.set_ylim(6.5, 19.2)
+    a.set_xlim(_t("2026-07-27T20:00:00"), _t("2026-07-31T23:59:00"))           # room for the legend before the rise
     a.xaxis.set_major_locator(mdates.DayLocator())
     a.xaxis.set_minor_locator(mdates.HourLocator(byhour=[6, 12, 18]))
     a.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
-    a.legend(loc="lower right", bbox_to_anchor=(1.0, 0.0), frameon=False)
+    a.legend(loc="center left", bbox_to_anchor=(0.0, (16 - 6.5) / (19.2 - 6.5)), frameon=False, handletextpad=0.4,
+             labelspacing=0.25)                                 # between the 14 and 18 ft lines
     _label(a, "a")
 
     err = cam - obs
@@ -217,9 +226,11 @@ def timeline_figure() -> None:
     tt = [_t(str(x)) for x in gt]
     fig, a = plt.subplots(figsize=(FULL_W, 1.9))
     a.axvspan(_t("2026-07-29T13:00:00"), _t("2026-07-29T23:00:00"), color="#000000", alpha=0.05, lw=0)
-    a.text(_t("2026-07-29T13:10:00"), 11.5, "injected fault: gauge frozen (13:00 to 23:00)", fontsize=7, color="#555555")
-    a.axhline(18, color=FLOOD, lw=0.7, ls="--")
-    a.text(_t("2026-07-30T03:00:00"), 18.12, "NWS minor flood (18 ft)", color=FLOOD, fontsize=7, va="bottom", ha="right")
+    a.text(_t("2026-07-29T22:50:00"), 18.95, "fault: gauge frozen", fontsize=7, color="#555555",
+           ha="right", va="top")
+    a.axhline(18, color=FLOOD, lw=0.7, ls="--", gid="ref")
+    a.text(_t("2026-07-30T03:00:00"), 18.12, "NWS minor flood (18 ft)", color=FLOOD, fontsize=7, va="bottom", ha="right",
+           gid="on-line")
     a.plot(tt, gv, color=GAUGE, lw=0.8, ls=":", label="true stage (USGS record, held out)")
     a.plot(tt, fv, color=GAUGE, lw=1.1, label="USGS gauge as reported (frozen)")
     cam = [r for r in rows if r["camera"]["stage_ft"] is not None]
@@ -228,9 +239,9 @@ def timeline_figure() -> None:
     fault0 = _t("2026-07-29T13:00:00")
     for p, col, name, ha in (("claude", CAM, "Claude", "right"), ("rules", "#555555", "Rules", "left")):
         t = next(_t(r["time_utc"]) for r in tr[p] if any(x["type"] == "flag_sensor" for x in r["actions"]))
-        a.axvline(t, color=col, lw=1.0, alpha=0.85)
-        a.text(t, 19.0, f" {name} flags gauge, +{(t - fault0).total_seconds() / 3600:.0f} h ", color=col,
-               fontsize=7, ha=ha, va="top", fontweight="bold")
+        a.axvline(t, color=col, lw=1.0, alpha=0.85, gid="ref")
+        a.text(t, 11.55, f" {name} flags gauge, +{(t - fault0).total_seconds() / 3600:.0f} h ", color=col,
+               fontsize=7, ha=ha, va="bottom", fontweight="bold", gid="on-line")
     a.set_ylim(11.2, 19.2)
     a.set_ylabel("Stage (ft)")
     a.xaxis.set_major_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
@@ -316,3 +327,6 @@ if __name__ == "__main__":
     timeline_figure()
     faults_figure()
     print(m, p, coverage_figure())
+    for issue in ISSUES:
+        print(issue)
+    print(f"layout check: {len(ISSUES)} problems")

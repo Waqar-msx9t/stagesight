@@ -152,6 +152,30 @@ def decide(store, approval_id: str, decision: str, who: str = "operator") -> dic
     return {"error": "not found or already decided"}
 
 
+def notify(item: dict, topic_arn: str | None, publish=None) -> dict:
+    """After an operator approves a flag or alert, send it to the subscribers of an SNS topic.
+
+    This is the only path by which anything leaves the system, and only for approved items.
+    `publish` is injectable for tests; by default it is boto3's SNS publish.
+    """
+    if not topic_arn or item.get("status") != "approved":
+        return item
+    kind = f"{item.get('level', '')} alert".strip() if item["type"] == "draft_alert" else f"sensor flag: {item.get('suspect')}"
+    subject = f"StageSight, Hancock NY (USGS 01421500): {kind}"[:100]
+    body = "\n".join([f"Approved by {item.get('decided_by')} at {item.get('decided_utc')} UTC.", "",
+                      item.get("message") or item.get("reason") or "", "",
+                      f"Evidence: {item['evidence']}" if item.get("evidence") else "",
+                      "StageSight is a decision aid, not an official warning. Camera stages are provisional."])
+    try:
+        if publish is None:
+            import boto3
+            publish = boto3.client("sns").publish
+        publish(TopicArn=topic_arn, Subject=subject, Message=body)
+        return {**item, "sent": "sns"}
+    except Exception as exc:  # noqa: BLE001  (a failed email must not lose the recorded decision)
+        return {**item, "sent": f"failed: {type(exc).__name__}"}
+
+
 def measure_bytes(reader: SiteReader, data: bytes) -> dict:
     """API: stage from an uploaded frame of the same camera."""
     img = cv.imdecode(np.frombuffer(data, np.uint8), cv.IMREAD_COLOR)

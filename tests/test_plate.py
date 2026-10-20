@@ -81,6 +81,14 @@ def test_each_frame_is_processed_once(tmp_path):
     assert len(storage.get_json(store, "timeseries.json")) == 1
 
 
+def test_only_approved_items_are_sent():
+    sent = []
+    item = {"type": "draft_alert", "level": "flood", "message": "Stage 18.4 ft", "decided_by": "op", "decided_utc": "t"}
+    assert "sent" not in service.notify({**item, "status": "rejected"}, "arn:x", lambda **k: sent.append(k))
+    assert service.notify({**item, "status": "approved"}, "arn:x", lambda **k: sent.append(k))["sent"] == "sns"
+    assert len(sent) == 1 and "flood alert" in sent[0]["Subject"]
+
+
 @pytest.fixture
 def api(tmp_path, monkeypatch):
     monkeypatch.setenv("STORE", f"local:{tmp_path}")

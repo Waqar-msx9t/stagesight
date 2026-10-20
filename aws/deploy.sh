@@ -19,7 +19,13 @@ ZIP=build/stagesight_lambda.zip
 # operator token for POST /approve: keep the deployed one, else make one (printed once below)
 APPROVE_TOKEN=${APPROVE_TOKEN:-$($AWS lambda get-function-configuration --function-name "$FN_API"   --query Environment.Variables.APPROVE_TOKEN --output text 2>/dev/null | grep -v None || true)}
 [ -z "$APPROVE_TOKEN" ] && APPROVE_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(18))") && NEW_TOKEN=1
-ENV="Variables={STORE=s3:$BUCKET,UPSTREAM_SITE=01417500,AGENT_BACKEND=$AGENT_BACKEND,AGENT_MODEL=$AGENT_MODEL,BEDROCK_REGION=${BEDROCK_REGION:-us-east-1},APPROVE_TOKEN=$APPROVE_TOKEN,OPENCV_IO_MAX_IMAGE_PIXELS=40000000}"
+# approved alerts and flags go out by email through SNS (the only path out of the system)
+TOPIC_ARN=$($AWS sns create-topic --name stagesight-alerts --query TopicArn --output text)
+if [ -n "${ALERT_EMAIL:-}" ] && ! $AWS sns list-subscriptions-by-topic --topic-arn "$TOPIC_ARN"      --query "Subscriptions[].Endpoint" --output text | grep -qw "$ALERT_EMAIL"; then
+  $AWS sns subscribe --topic-arn "$TOPIC_ARN" --protocol email --notification-endpoint "$ALERT_EMAIL" >/dev/null
+  echo "subscribed $ALERT_EMAIL to $TOPIC_ARN (confirm the email AWS sends)"
+fi
+ENV="Variables={ALERT_TOPIC_ARN=$TOPIC_ARN,STORE=s3:$BUCKET,UPSTREAM_SITE=01417500,AGENT_BACKEND=$AGENT_BACKEND,AGENT_MODEL=$AGENT_MODEL,BEDROCK_REGION=${BEDROCK_REGION:-us-east-1},APPROVE_TOKEN=$APPROVE_TOKEN,OPENCV_IO_MAX_IMAGE_PIXELS=40000000}"
 
 echo "== account $ACCOUNT, region $REGION, bucket $BUCKET, agent $AGENT_BACKEND"
 
@@ -33,7 +39,7 @@ if ! $AWS s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
   echo "created bucket $BUCKET (private)"
 fi
 
-# 2. execution role: logs, this bucket only, Bedrock model calls
+# 2. execution role: logs, this bucket only, Bedrock model calls, the alert topic
 if ! $AWS iam get-role --role-name "$ROLE" >/dev/null 2>&1; then
   $AWS iam create-role --role-name "$ROLE" --assume-role-policy-document \
     '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}' >/dev/null
@@ -46,7 +52,8 @@ $AWS iam put-role-policy --role-name "$ROLE" --policy-name stagesight-access --p
    {\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\",\"s3:PutObject\"],\"Resource\":\"arn:aws:s3:::$BUCKET/*\"},
    {\"Effect\":\"Allow\",\"Action\":[\"s3:ListBucket\"],\"Resource\":\"arn:aws:s3:::$BUCKET\"},
    {\"Effect\":\"Allow\",\"Action\":[\"bedrock:InvokeModel\",\"bedrock:InvokeModelWithResponseStream\"],
-    \"Resource\":[\"arn:aws:bedrock:*::foundation-model/anthropic.claude-*\",\"arn:aws:bedrock:*:$ACCOUNT:inference-profile/*anthropic.claude-*\"]}]}"
+    \"Resource\":[\"arn:aws:bedrock:*::foundation-model/anthropic.claude-*\",\"arn:aws:bedrock:*:$ACCOUNT:inference-profile/*anthropic.claude-*\"]},
+   {\"Effect\":\"Allow\",\"Action\":[\"sns:Publish\"],\"Resource\":\"$TOPIC_ARN\"}]}"
 ROLE_ARN=$($AWS iam get-role --role-name "$ROLE" --query Role.Arn --output text)
 
 # 3. code

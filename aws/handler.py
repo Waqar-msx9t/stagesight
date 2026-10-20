@@ -112,5 +112,7 @@ def api(event, context):
         if not isinstance(req, dict):
             return _resp(400, {"error": "body must be a JSON object"})
         out = service.decide(store, str(req.get("id")), str(req.get("decision")), str(req.get("who", "operator")))
+        if "error" not in out:
+            out = service.notify(out, os.environ.get("ALERT_TOPIC_ARN"))      # approved items only
         return _resp(404 if "error" in out else 200, out)
     return _resp(404, {"error": f"no route {method} {path}"})
