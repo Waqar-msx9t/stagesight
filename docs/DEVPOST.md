@@ -71,6 +71,9 @@ camera to become a second instrument that can check the first.
 - **29 July 2026 flood at Hancock, NY (NWS minor flood, 18.08 ft peak): 0.26 ft RMSE against the
   USGS gauge, 29 of 30 readings within 0.5 ft, with no gauge data.** A linear pixel fit trained on
   a smaller September high water has 6.3 ft RMSE. The camera follows both flood peaks.
+- **Second test event, 4–5 Sep 2026 high water** (frames the reader never used): 0.34 ft RMSE,
+  15 of 15 within 0.5 ft. The water stayed inside one gap between two marks, so this is one
+  reading repeated; the archive has no daylight frame spoiled by rain, fog or glare.
 - **Injected faults, repeated runs** (Claude Opus 4.6 and Sonnet 4.6 against a rule baseline):
   Opus 4.6 caught all four gauge faults in 3 of 3 runs (frozen gauge in 2 h vs 4 h for the rules,
   drift in 7 h vs 8 h) and blamed the camera in both camera faults in 3 of 3 runs. It is not
@@ -81,7 +84,7 @@ camera to become a second instrument that can check the first.
   baseline blamed the healthy gauge and published the bad camera stage; Claude blamed the camera.
   In the debris case it noticed the visible marks drop from 11 to 7 while both gauges said the
   river was falling.
-- **90 days of normal operation** (1,863 frames): 0 false sensor flags from the rule planner and 0 from Claude Opus 4.6 (one run, 17k input / 2.9k output tokens); both drafted only the action and flood alerts at the real flood.
+- **90 days of normal operation** (1,863 frames): 0 false sensor flags from the rule planner and 0 from Claude Opus 4.6 (one run, 17k input / 2.9k output tokens); both drafted only the action and flood alerts at the real flood. Only two events reached the planner in those 90 days, so this is a small sample, not a measured false-alarm rate.
 - **COOL on Graviton4:** with 16 worker processes a c8g.4xlarge re-reads the whole 90-day archive
   (1,869 frames) in 4.1 s, about $0.0008 at on-demand prices, scaling almost linearly from 33 frames/s
   with one worker. COOL gives the same status and stage as pip OpenCV in every frame; it is 4% faster
