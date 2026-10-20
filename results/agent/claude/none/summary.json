@@ -1,0 +1,19 @@
+{
+ "frames": 57,
+ "events": 2,
+ "flood_alert": true,
+ "action_alert": true,
+ "flags": [],
+ "alerts": [
+  [
+   "2026-07-29T10:00:02",
+   "action"
+  ],
+  [
+   "2026-07-29T17:00:09",
+   "flood"
+  ]
+ ],
+ "provisional": 0,
+ "false_flags": 0
+}

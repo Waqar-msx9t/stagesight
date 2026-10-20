@@ -1,0 +1,16 @@
+.venv/
+data/
+__pycache__/
+build/
+var/
+*.log
+# results: keep only the evidence the README and report cite
+results/*
+!results/hancock_plate/
+!results/agent/
+!results/agent_90d/
+!results/figures/
+!results/agent/*.log
+.env
+.env.*
+.claude/

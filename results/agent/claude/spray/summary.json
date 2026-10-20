@@ -1,0 +1,37 @@
+{
+ "frames": 57,
+ "events": 3,
+ "flood_alert": true,
+ "action_alert": true,
+ "flags": [
+  [
+   "2026-07-30T11:00:04",
+   "camera"
+  ]
+ ],
+ "alerts": [
+  [
+   "2026-07-29T10:00:02",
+   "action"
+  ],
+  [
+   "2026-07-29T17:00:09",
+   "flood"
+  ]
+ ],
+ "provisional": 0,
+ "blamed_gauge": 0,
+ "blamed_camera": 1,
+ "published_bad_camera": 0,
+ "false_flags": 0,
+ "correct": true,
+ "fault": {
+  "kind": "camera:spray",
+  "start": "2026-07-30T10:00:00",
+  "end": "2026-07-30T17:00:00",
+  "band_ft": [
+   12.4,
+   14.8
+  ]
+ }
+}

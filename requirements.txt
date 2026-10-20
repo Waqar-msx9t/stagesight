@@ -1,0 +1,5 @@
+opencv-python-headless==5.0.0.93
+numpy==2.5.4
+requests==2.34.2
+boto3==1.43.114
+anthropic[bedrock]==1.15.0

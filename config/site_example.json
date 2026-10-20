@@ -1,0 +1,14 @@
+{
+  "site_id": "06887500",
+  "site_name": "Kansas River at Wamego, KS (example; replace with your chosen site)",
+  "camera_id": "FILL_FROM_NIMS",
+  "reference_image": "data/reference.jpg",
+  "transects": [
+    [[640, 300], [640, 620]],
+    [[700, 300], [700, 620]],
+    [[760, 300], [760, 620]]
+  ],
+  "flood_stage_ft": null,
+  "action_stage_ft": null,
+  "train_fraction": 0.7
+}

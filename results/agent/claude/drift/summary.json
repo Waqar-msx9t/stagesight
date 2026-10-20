@@ -1,0 +1,32 @@
+{
+ "frames": 57,
+ "events": 3,
+ "flood_alert": true,
+ "action_alert": true,
+ "flags": [
+  [
+   "2026-07-29T19:00:08",
+   "site_gauge"
+  ]
+ ],
+ "alerts": [
+  [
+   "2026-07-29T10:00:02",
+   "action"
+  ],
+  [
+   "2026-07-29T17:00:09",
+   "flood"
+  ]
+ ],
+ "provisional": 1,
+ "false_flags": 0,
+ "detected": true,
+ "delay_h": 7.002222222222223,
+ "fault": {
+  "kind": "drift",
+  "start": "2026-07-29T12:00:00",
+  "end": "2026-07-30T00:00:00",
+  "size_ft": 1.5
+ }
+}
