@@ -5,8 +5,7 @@ If this legacy endpoint is retired, use the new API at https://api.waterdata.usg
 
 Camera images: USGS National Imagery Management System (NIMS) API,
 base URL https://api.waterdata.usgs.gov/nims/v0 (docs: https://api.waterdata.usgs.gov/nims/v0/docs).
-Fill in the camera and image list paths from the Swagger page on day 1. A free API key from
-https://api.waterdata.usgs.gov/signup/ raises the rate limit (set API_USGS_PAT).
+A free API key from https://api.waterdata.usgs.gov/signup/ raises the rate limit (set API_USGS_PAT).
 """
 from __future__ import annotations
 
@@ -30,7 +29,8 @@ def gage_height(site: str, start: str, end: str) -> tuple[np.ndarray, np.ndarray
     t = np.array([np.datetime64(datetime.fromisoformat(v["dateTime"]).astimezone(timezone.utc)
                                 .replace(tzinfo=None), "s") for v in values])
     h = np.array([float(v["value"]) for v in values])
-    return t, h
+    keep = h > -999          # USGS writes -999999 for ice, equipment and other no-data codes
+    return t[keep], h[keep]
 
 
 def stage_at(times, stages, when: np.datetime64, max_gap_min: int = 20) -> float | None:
@@ -74,7 +74,7 @@ def latest_image_url(cam_id: str) -> str:
 
 def image_time(url: str) -> np.datetime64:
     """UTC time from a NIMS filename like CAM___2026-10-18T18-00-03Z.jpg."""
-    d, t = url.rsplit("___", 1)[1].rstrip(".jpg").rstrip("Z").split("T")
+    d, t = url.rsplit("___", 1)[1].removesuffix(".jpg").removesuffix("Z").split("T")
     return np.datetime64(f"{d}T{t.replace('-', ':')}", "s")
 
 

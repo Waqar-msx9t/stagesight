@@ -1,25 +1,11 @@
-"""OpenCV 5 image analysis: quality checks, camera alignment and waterline detection."""
+"""Research mode for cameras without a staff plate (see stagesight/selfcal.py and the report,
+Sec. VIII): ORB alignment and transect waterline detectors. The plate reader does not use it."""
 from __future__ import annotations
 
 import cv2 as cv
 import numpy as np
 
-
-def quality_check(img: np.ndarray, min_sharpness: float = 40.0,
-                  min_brightness: float = 35.0, max_brightness: float = 235.0) -> dict:
-    """Reject frames that are dark (night), washed out (glare) or blurred (rain, fog)."""
-    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    sharpness = float(cv.Laplacian(gray, cv.CV_64F).var())
-    brightness = float(gray.mean())
-    reasons = []
-    if sharpness < min_sharpness:
-        reasons.append("blurred")
-    if brightness < min_brightness:
-        reasons.append("too_dark")
-    if brightness > max_brightness:
-        reasons.append("overexposed")
-    return {"ok": not reasons, "sharpness": sharpness,
-            "brightness": brightness, "reasons": reasons}
+from stagesight.plate import quality_check  # noqa: F401  (re-exported for the research scripts)
 
 
 class Aligner:

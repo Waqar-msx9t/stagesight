@@ -26,8 +26,13 @@ class SiteReader:
     def read(self, img: np.ndarray) -> dict:
         """Stage in ft (plate datum), bracket, status and the evidence behind it.
 
-        Status is one of: ok, below_plate, unreadable, rejected, camera_moved.
+        Status is one of: ok, below_plate, unreadable, rejected, camera_moved, wrong_size.
         """
+        if img.shape[:2] != self.reference.shape[:2]:
+            # the plate geometry belongs to this camera's frame size; never guess on another
+            return {"status": "wrong_size", "stage_ft": None, "mark_gap_ft": None, "shift_px": [0.0, 0.0],
+                    "marks_visible": 0, "marks_total": len(self.bars), "mark_errors": None,
+                    "expected_size": [self.reference.shape[1], self.reference.shape[0]], "_raw": {}}
         r = plate.read_bars(img, self.plate, self.bars, reg=self.reg)
         out = {"status": r["status"], "stage_ft": None, "mark_gap_ft": None,
                "shift_px": [round(float(v), 1) for v in r.get("shift", (0, 0))],
@@ -61,7 +66,10 @@ class SiteReader:
         raw = result["_raw"]
         dx, dy = (int(round(v)) for v in raw.get("shift", (0, 0)))
         h, w = vis.shape[:2]
-        for b, seen in zip(self.bars, raw.get("visible", [])):
+        # marks are drawn only when the reader could see the plate; on a night or fogged frame
+        # every mark is "not visible", which must not look like "under water"
+        marks = raw.get("visible", []) if result["status"] in ("ok", "below_plate") else []
+        for b, seen in zip(self.bars, marks):
             vis[np.clip(b["ys"] + dy, 0, h - 1), np.clip(b["xs"] + dx, 0, w - 1)] = VISIBLE if seen else HIDDEN
         if result["status"] == "ok":
             o = np.array(self.plate["origin"]) + [dx, dy]
@@ -72,6 +80,7 @@ class SiteReader:
             cv.line(vis, tuple(p0), tuple(p1), (0, 0, 0), 9, cv.LINE_AA)
             cv.line(vis, tuple(p0), tuple(p1), (0, 220, 255), 5, cv.LINE_AA)
         lines = [f"camera: {result['stage_ft']:.2f} ft" if result["stage_ft"] is not None
+                 else "camera: no reading (marks not visible)" if result["status"] == "unreadable"
                  else f"camera: {result['status'].replace('_', ' ')}"]
         if gauge_ft is not None:
             lines.append(f"gauge:  {gauge_ft:.2f} ft")

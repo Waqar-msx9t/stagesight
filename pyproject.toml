@@ -1,0 +1,21 @@
+[project]
+name = "stagesight"
+version = "1.0.0"
+description = "A river camera that checks its own gauge: OpenCV 5 staff-plate reader and a Claude agent on AWS"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Muhammad Waqar Saleem" }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["research: slow tests of the self-calibrated research mode (deselect with -m 'not research')"]
+addopts = "-m 'not research'"
+
+[tool.ruff]
+line-length = 150
+target-version = "py312"
+extend-exclude = ["build", "data", "results", "var", "web"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E402", "E741", "B905", "UP017"]

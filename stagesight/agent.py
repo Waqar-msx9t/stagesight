@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass, field
 
 import numpy as np
-from dataclasses import dataclass, field
+from botocore.exceptions import BotoCoreError
 
 from stagesight.reader import SiteReader, public
 
@@ -206,9 +207,9 @@ class ClaudePlanner:
         if backend == "bedrock":
             # Bedrock runtime with a cross-region inference profile; AGENT_MODEL selects the model.
             from anthropic import AnthropicBedrock
-            self.client = AnthropicBedrock(   # new accounts have low request quotas: retry patiently
+            self.client = AnthropicBedrock(   # new accounts have low request quotas: retry patiently,
                 aws_region=os.environ.get("BEDROCK_REGION", os.environ.get("AWS_REGION", "us-east-1")),
-                max_retries=8)
+                max_retries=6, timeout=90)    # but always inside the 300 s Lambda timeout
             self.model = model or os.environ.get("AGENT_MODEL", "global.anthropic.claude-opus-4-6-v1")
         else:
             import anthropic
@@ -227,7 +228,7 @@ class ClaudePlanner:
                 resp = self.client.messages.create(
                     model=self.model, max_tokens=8000, system=SYSTEM, tools=TOOL_SPECS,
                     thinking={"type": "adaptive"}, output_config={"effort": "medium"}, messages=messages)
-            except (anthropic.RateLimitError, anthropic.APIConnectionError, anthropic.InternalServerError) as exc:
+            except (anthropic.APIError, BotoCoreError) as exc:
                 # the monitor must keep working when the model is unreachable: log it, use the rules
                 trace.append({"note": f"model unavailable ({type(exc).__name__}); rule planner used"})
                 return trace + self.fallback.handle(event, tools)

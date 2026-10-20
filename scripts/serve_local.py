@@ -19,11 +19,11 @@ import numpy as np
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, ROOT)
+from scripts.replay_agent import SCENARIOS  # noqa: E402
 from stagesight import service, storage  # noqa: E402
 from stagesight.agent import ClaudePlanner, RulePlanner  # noqa: E402
 from stagesight.reader import SiteReader  # noqa: E402
-from stagesight.world import ReplayWorld, inject_fault, load_series  # noqa: E402
-from scripts.replay_agent import SCENARIOS  # noqa: E402
+from stagesight.world import ReplayWorld, inject_fault, load_series, plate_band  # noqa: E402
 
 
 def ticker(a, reader, store, planner):
@@ -37,10 +37,16 @@ def ticker(a, reader, store, planner):
                 print("tick failed:", exc)
             time.sleep(a.interval)
     gt, gv = load_series(a.gauge)
+    cam_fault = None
     if a.fault != "none":
         kind, start, hours, size = SCENARIOS[a.fault]
-        gv, _ = inject_fault(gt, gv, kind, start, hours, size)
-    world = ReplayWorld(a.images, (gt, gv), load_series(a.upstream))
+        if kind.startswith("camera:"):          # same faults as scripts/replay_agent.py
+            cam_fault = {"kind": kind.split(":")[1], "start": start, "seed": 1,
+                         "end": str(np.datetime64(start) + np.timedelta64(hours, "h")),
+                         "polygon": plate_band(reader.plate, *size, reader.site["datum_ft"]).tolist()}
+        else:
+            gv, _ = inject_fault(gt, gv, kind, start, hours, size)
+    world = ReplayWorld(a.images, (gt, gv), load_series(a.upstream), cam_fault)
     frames = world.frame_t[(world.frame_t >= np.datetime64(a.start)) & (world.frame_t < np.datetime64(a.end))]
     for t in frames:
         world.now = t
@@ -74,6 +80,8 @@ def make_handler(reader, store, web_dir):
                 return self._send(200, b'window.STAGESIGHT={data:"data/",api:"api"};', "text/javascript")
             if path.startswith("/data/"):
                 key = path[len("/data/"):]
+                if key not in ("latest.json", "timeseries.json", "events.json", "approvals.json", "latest_overlay.jpg"):
+                    return self._send(404, {"error": "unknown key"})     # same allowlist as aws/handler.py
                 body = store.get(key)
                 ctype = "image/jpeg" if key.endswith(".jpg") else "application/json"
                 return self._send(200, body, ctype) if body is not None else self._send(404, {"error": key})
@@ -86,7 +94,12 @@ def make_handler(reader, store, web_dir):
                 out = service.measure_bytes(reader, body)
                 return self._send(400 if "error" in out else 200, out)
             if self.path == "/api/approve":
-                req = json.loads(body or b"{}")
+                try:
+                    req = json.loads(body or b"{}")
+                except ValueError:
+                    return self._send(400, {"error": "body must be JSON"})
+                if not isinstance(req, dict):
+                    return self._send(400, {"error": "body must be a JSON object"})
                 out = service.decide(store, str(req.get("id")), str(req.get("decision")), "local operator")
                 return self._send(404 if "error" in out else 200, out)
             return self._send(404, {"error": self.path})

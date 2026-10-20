@@ -31,6 +31,7 @@ def main():
     shutil.copy(os.path.join(ROOT, "aws", "handler.py"), BUILD)
     os.makedirs(os.path.join(BUILD, "web"), exist_ok=True)
     shutil.copy(os.path.join(ROOT, "web", "index.html"), os.path.join(BUILD, "web"))
+    shutil.copytree(os.path.join(ROOT, "web", "replay"), os.path.join(BUILD, "web", "replay"))  # replay mode
     for junk in ("bin",):
         shutil.rmtree(os.path.join(BUILD, junk), ignore_errors=True)
     size = sum(os.path.getsize(os.path.join(p, f)) for p, _, fs in os.walk(BUILD) for f in fs) / 1e6

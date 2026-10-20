@@ -1,8 +1,10 @@
 """Download NIMS camera frames and USGS gage height for one site.
 
-Usage:
-  python scripts/download_site.py --cam MO_Missouri_River_at_Hermann --site 06934500 --days 90
-Writes data/<cam>/frames/*.jpg, data/images.csv (path,time_utc) and data/gauge.csv (time_utc,stage_ft).
+Usage (the Hancock data behind the report):
+  python scripts/download_site.py --cam NY_East_Branch_Delaware_River_at_Hancock_Staff --site 01421500 \\
+      --start 2026-07-21 --end 2026-10-20 --upstream 01417500 --out data/hancock
+Writes <out>/<cam>/frames/*.jpg, <out>/images.csv (path,time_utc), <out>/gauge.csv (time_utc,stage_ft)
+and, with --upstream, <out>/upstream_<site>.csv.
 """
 import argparse
 import csv
@@ -20,13 +22,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cam", required=True)
     ap.add_argument("--site", required=True)
-    ap.add_argument("--days", type=int, default=90)
+    ap.add_argument("--days", type=int, default=90, help="days back from now (ignored with --start)")
+    ap.add_argument("--start", help="first day, e.g. 2026-07-21 (fixed window, reproducible)")
+    ap.add_argument("--end", help="last day (default now)")
+    ap.add_argument("--upstream", help="also save this USGS site's gage height (agent tool)")
     ap.add_argument("--size", default="overlayDir", help="overlayDir (full) or smallDir (720 px)")
     ap.add_argument("--out", default="data")
     a = ap.parse_args()
 
-    end = np.datetime64("now", "s")
-    start = end - np.timedelta64(a.days, "D")
+    end = np.datetime64(a.end, "s") if a.end else np.datetime64("now", "s")
+    start = np.datetime64(a.start, "s") if a.start else end - np.timedelta64(a.days, "D")
     frame_dir = os.path.join(a.out, a.cam, "frames")
     os.makedirs(frame_dir, exist_ok=True)
 
@@ -57,12 +62,14 @@ def main():
         w.writerow(["path", "time_utc"])
         w.writerows(rows)
 
-    gt, gh = usgs.gage_height(a.site, str(start.astype("datetime64[D]")),
-                              str((end + np.timedelta64(1, "D")).astype("datetime64[D]")))
-    with open(os.path.join(a.out, "gauge.csv"), "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["time_utc", "stage_ft"])
-        w.writerows(zip(map(str, gt), gh))
+    span = (str(start.astype("datetime64[D]")), str((end + np.timedelta64(1, "D")).astype("datetime64[D]")))
+    gt, gh = usgs.gage_height(a.site, *span)
+    for site, name in [(a.site, "gauge.csv")] + ([(a.upstream, f"upstream_{a.upstream}.csv")] if a.upstream else []):
+        t, v = (gt, gh) if site == a.site else usgs.gage_height(site, *span)
+        with open(os.path.join(a.out, name), "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["time_utc", "stage_ft"])
+            w.writerows(zip(map(str, t), v))
     print(f"{len(rows)} frames, {len(gt)} gauge values, stage {gh.min():.2f} to {gh.max():.2f} ft")
 
 

@@ -93,6 +93,11 @@ def save_state(store, st: AgentState) -> None:
 def tick(store, reader: SiteReader, world, planner) -> dict:
     """One monitoring step. Returns the published record."""
     t0 = time.perf_counter()
+    # the schedule runs every 15 min but the camera posts hourly: each frame is processed once,
+    # so the agent's frame counts (CONFIRM_FRAMES, camera_blind) count frames, not ticks
+    prev = storage.get_json(store, "latest.json") or {}
+    if prev.get("frame_time_utc") and str(prev["frame_time_utc"])[:19] == str(world.now)[:19]:
+        return {**prev, "skipped": "frame already processed"}
     mon = Monitor(reader, world, planner, load_state(store))
     rec = mon.tick()
     cam = rec["camera"] or {}

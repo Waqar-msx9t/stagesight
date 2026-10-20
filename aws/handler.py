@@ -11,14 +11,19 @@ Environment: STORE=s3:<bucket>, SITE_DIR (default /var/task/sites/hancock), UPST
              AGENT_BACKEND=bedrock|rules, AGENT_MODEL (default global.anthropic.claude-opus-4-6-v1).
 """
 import base64
+import hmac
 import json
 import os
+import re
 
 from stagesight import service, storage
 from stagesight.agent import ClaudePlanner, RulePlanner
 from stagesight.reader import SiteReader
 
-SITE_DIR = os.environ.get("SITE_DIR", os.path.join(os.path.dirname(__file__), "sites", "hancock"))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+SITE_DIR = os.environ.get("SITE_DIR") or next(
+    p for p in (os.path.join(_HERE, "sites", "hancock"), os.path.join(_HERE, "..", "sites", "hancock"))
+    if os.path.exists(p))
 _reader = None
 
 
@@ -45,7 +50,6 @@ def scheduled(event, context):
     return service.tick(store, reader, world, _planner())
 
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
 WEB = next(p for p in (os.path.join(_HERE, "web", "index.html"),               # Lambda package
                        os.path.join(_HERE, "..", "web", "index.html"))         # repo checkout
            if os.path.exists(p))
@@ -66,7 +70,7 @@ def api(event, context):
     http = event.get("requestContext", {}).get("http", {})
     method, path = http.get("method", "GET"), event.get("rawPath", "/latest")
     raw = event.get("body") or ""
-    data = base64.b64decode(raw) if event.get("isBase64Encoded") else raw.encode("latin1")
+    data = base64.b64decode(raw) if event.get("isBase64Encoded") else raw.encode("utf-8")
     # the dashboard is served from here too, so the S3 bucket stays private
     if method == "GET" and path in ("/", "/index.html"):
         return _resp(200, open(WEB, encoding="utf-8").read(), "text/html; charset=utf-8")
@@ -77,9 +81,18 @@ def api(event, context):
         if key not in ("latest.json", "timeseries.json", "events.json", "approvals.json", "latest_overlay.jpg"):
             return _resp(404, {"error": "unknown key"})
         body = store.get(key)
+        if body is None and key.endswith(".json"):
+            return _resp(200, "[]" if key in ("events.json", "approvals.json", "timeseries.json") else "{}")
         if body is None:
             return _resp(404, {"error": f"{key} not written yet"})
         return _resp(200, body, "image/jpeg" if key.endswith(".jpg") else "application/json")
+    # replay mode: the 29 Jul 2026 flood with the agent's recorded decisions, shipped in the package
+    if method == "GET" and re.fullmatch(r"/replay/([a-z]+\.json|img/[a-z]+_[0-9T-]+\.jpg)", path):
+        f = os.path.join(os.path.dirname(WEB), path.lstrip("/"))
+        if not os.path.exists(f):
+            return _resp(404, {"error": "no such replay file"})
+        with open(f, "rb") as fh:
+            return _resp(200, fh.read(), "image/jpeg" if path.endswith(".jpg") else "application/json")
     if method == "GET" and path == "/latest":
         return _resp(200, (store.get("latest.json") or b"{}").decode())
     if method == "GET" and path == "/approvals":
@@ -88,10 +101,16 @@ def api(event, context):
         out = service.measure_bytes(reader, data)
         return _resp(400 if "error" in out else 200, out)
     if method == "POST" and path == "/approve":
+        token = os.environ.get("APPROVE_TOKEN")
+        headers = {k.lower(): v for k, v in (event.get("headers") or {}).items()}
+        if token and not hmac.compare_digest(headers.get("authorization", ""), "Bearer " + token):
+            return _resp(401, {"error": "approvals need the operator token"})
         try:
             req = json.loads(data or b"{}")
-        except json.JSONDecodeError:
+        except ValueError:                       # bad JSON or bad UTF-8
             return _resp(400, {"error": "body must be JSON"})
+        if not isinstance(req, dict):
+            return _resp(400, {"error": "body must be a JSON object"})
         out = service.decide(store, str(req.get("id")), str(req.get("decision")), str(req.get("who", "operator")))
         return _resp(404 if "error" in out else 200, out)
     return _resp(404, {"error": f"no route {method} {path}"})

@@ -10,7 +10,22 @@ from __future__ import annotations
 import cv2 as cv
 import numpy as np
 
-from stagesight import vision
+
+def quality_check(img: np.ndarray, min_sharpness: float = 40.0,
+                  min_brightness: float = 35.0, max_brightness: float = 235.0) -> dict:
+    """Reject frames that are dark (night), washed out (glare) or blurred (rain, fog)."""
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    sharpness = float(cv.Laplacian(gray, cv.CV_64F).var())
+    brightness = float(gray.mean())
+    reasons = []
+    if sharpness < min_sharpness:
+        reasons.append("blurred")
+    if brightness < min_brightness:
+        reasons.append("too_dark")
+    if brightness > max_brightness:
+        reasons.append("overexposed")
+    return {"ok": not reasons, "sharpness": sharpness,
+            "brightness": brightness, "reasons": reasons}
 
 
 def red_mask(img: np.ndarray) -> np.ndarray:
@@ -185,7 +200,7 @@ def read_bars(img: np.ndarray, plate: dict, bars: list[dict], min_contrast: floa
     between the lowest visible bar's bottom edge and the next bar's top edge.
     Returns units (plate ft below the top foot bar) or a status when the water is off the plate.
     """
-    q = vision.quality_check(img)
+    q = quality_check(img)
     if not q["ok"]:
         return {"status": "rejected", "quality": q, "units": None}
     dx = dy = 0.0

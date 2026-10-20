@@ -1,0 +1,71 @@
+=== opus_r1 2026-10-20T04:58:14Z
+== none
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+   flood_alert=True detected=None delay_h=None false_flags=0 events=2 alerts=2
+== drift
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+  2026-07-29T19:00:08  disagree      -> flag_sensor, publish_provisional_stage
+   flood_alert=True detected=True delay_h=7.002222222222223 false_flags=0 events=3 alerts=2
+== offset
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+  2026-07-30T11:00:04  disagree      -> flag_sensor, publish_provisional_stage
+   flood_alert=True detected=True delay_h=1.001111111111111 false_flags=0 events=3 alerts=2
+== flatline
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T15:00:12  disagree      -> flag_sensor, publish_provisional_stage
+  2026-07-29T17:00:09  level_rise    -> flag_sensor, no_action, draft_alert
+   flood_alert=True detected=True delay_h=2.0033333333333334 false_flags=0 events=3 alerts=2
+== dropout
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  gauge_silent  -> flag_sensor, publish_provisional_stage, publish_provisional_stage, draft_alert
+  2026-07-29T17:00:09  level_rise    -> flag_sensor, publish_provisional_stage, publish_provisional_stage, draft_alert
+   flood_alert=True detected=True delay_h=1.0025 false_flags=0 events=3 alerts=2
+== occlusion
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+  2026-07-29T19:00:08  disagree      -> flag_sensor, no_action
+   flood_alert=True correct=True blamed_gauge=0 blamed_camera=1 published_bad_camera=0 false_flags=0
+== spray
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+  2026-07-30T11:00:04  disagree      -> flag_sensor, no_action
+   flood_alert=True correct=True blamed_gauge=0 blamed_camera=1 published_bad_camera=0 false_flags=0
+=== sonnet_r1 2026-10-20T05:11:00Z
+== none
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+   flood_alert=True detected=None delay_h=None false_flags=0 events=2 alerts=2
+== drift
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+  2026-07-29T19:00:08  disagree      -> flag_sensor, publish_provisional_stage
+   flood_alert=True detected=True delay_h=7.002222222222223 false_flags=0 events=3 alerts=2
+== offset
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+  2026-07-30T11:00:04  disagree      -> flag_sensor, publish_provisional_stage
+   flood_alert=True detected=True delay_h=1.001111111111111 false_flags=0 events=3 alerts=2
+== flatline
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T15:00:12  disagree      -> flag_sensor, flag_sensor, publish_provisional_stage
+  2026-07-29T17:00:09  level_rise    -> flag_sensor, flag_sensor, publish_provisional_stage, no_action, draft_alert
+   flood_alert=True detected=True delay_h=2.0033333333333334 false_flags=0 events=3 alerts=2
+== dropout
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  gauge_silent  -> flag_sensor, publish_provisional_stage, draft_alert
+  2026-07-29T17:00:09  level_rise    -> flag_sensor, publish_provisional_stage, draft_alert
+   flood_alert=True detected=True delay_h=1.0025 false_flags=0 events=3 alerts=2
+== occlusion
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+  2026-07-29T19:00:08  disagree      -> flag_sensor
+   flood_alert=True correct=True blamed_gauge=0 blamed_camera=1 published_bad_camera=0 false_flags=0
+== spray
+  2026-07-29T10:00:02  level_rise    -> draft_alert
+  2026-07-29T17:00:09  level_rise    -> draft_alert
+  2026-07-30T11:00:04  disagree      -> flag_sensor
+   flood_alert=True correct=True blamed_gauge=0 blamed_camera=1 published_bad_camera=0 false_flags=0
+=== opus_r2 2026-10-20T05:24:41Z

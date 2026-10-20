@@ -5,7 +5,7 @@ Usage:
   python scripts/replay_agent.py --all --planner rules            # every scenario
   python scripts/replay_agent.py --scenario none --start 2026-07-21 --end 2026-10-19   # false alarms
 
-Outputs results/agent/<planner>/<scenario>/trace.jsonl and summary.json.
+Outputs results/agent/<planner>[_<tag>]/<scenario>/trace.jsonl and summary.json.
 """
 import argparse
 import json
@@ -51,7 +51,8 @@ def score(records: list[dict], fault: dict | None) -> dict:
         out["blamed_camera"] = sum(a["suspect"] == "camera" for _, a in win)
         out["published_bad_camera"] = len([t for t in prov if t0 <= np.datetime64(t) <= grace])
         out["false_flags"] = len([t for t, _ in flags if not (t0 <= np.datetime64(t) <= grace)])
-        out["correct"] = out["blamed_gauge"] == 0 and out["published_bad_camera"] == 0
+        # correct = the camera is blamed, the healthy gauge is not, and the bad camera stage is never published
+        out["correct"] = out["blamed_camera"] > 0 and out["blamed_gauge"] == 0 and out["published_bad_camera"] == 0
         out["fault"] = fault
         return out
     inside = [t for t, a in flags if t0 <= np.datetime64(t) <= grace and a["suspect"] == "site_gauge"]
@@ -81,11 +82,11 @@ def run(a, name: str) -> dict:
         else:
             gv, fault = inject_fault(gt, gv, kind, start, hours, size)
     world = ReplayWorld(a.images, (gt, gv), load_series(a.upstream) if a.upstream else None, cam_fault)
-    planner = ClaudePlanner() if a.planner == "claude" else RulePlanner()
+    planner = ClaudePlanner(model=a.model) if a.planner == "claude" else RulePlanner()
     mon = Monitor(reader, world, planner)
     t_start, t_end = np.datetime64(a.start), np.datetime64(a.end)
     frames = world.frame_t[(world.frame_t >= t_start) & (world.frame_t < t_end)]
-    out_dir = os.path.join(a.out, a.planner, name)
+    out_dir = os.path.join(a.out, _label(a), name)
     os.makedirs(out_dir, exist_ok=True)
     records = []
     with open(os.path.join(out_dir, "trace.jsonl"), "w") as f:
@@ -98,8 +99,17 @@ def run(a, name: str) -> dict:
                 acts = ", ".join(x["type"] for x in rec["actions"])
                 print(f"  {rec['time_utc']}  {e['event']['kind']:<13} -> {acts}")
     s = score(records, fault)
+    # cost and robustness of the run: model tokens and events the rule fallback had to decide
+    s["fallbacks"] = sum(any("rule planner used" in str(x.get("note", "")) for x in e["trace"])
+                         for r in records for e in r["events"])
+    if a.planner == "claude":
+        s["model"], s["tokens_in"], s["tokens_out"] = planner.model, *planner.usage
     json.dump(s, open(os.path.join(out_dir, "summary.json"), "w"), indent=1, default=str)
     return s
+
+
+def _label(a) -> str:
+    return a.planner + (f"_{a.tag}" if a.tag else "")
 
 
 def main():
@@ -114,6 +124,8 @@ def main():
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--planner", default="rules", choices=["rules", "claude"])
     ap.add_argument("--out", default="results/agent")
+    ap.add_argument("--model", default=None, help="Bedrock model or inference profile (claude planner)")
+    ap.add_argument("--tag", default="", help="suffix for repeated runs, e.g. opus_r2")
     a = ap.parse_args()
     names = list(SCENARIOS) if a.all else [a.scenario]
     table = {}
@@ -128,7 +140,7 @@ def main():
             print(f"   flood_alert={s['flood_alert']} detected={s.get('detected')} delay_h={s.get('delay_h')} false_flags={s['false_flags']} "
                   f"events={s['events']} alerts={len(s['alerts'])}")
     if a.all:
-        json.dump(table, open(os.path.join(a.out, a.planner, "all_scenarios.json"), "w"), indent=1, default=str)
+        json.dump(table, open(os.path.join(a.out, _label(a), "all_scenarios.json"), "w"), indent=1, default=str)
 
 
 if __name__ == "__main__":

@@ -7,124 +7,248 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{--bg:#f4f4f1;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--line:#e2e1dc;
- --gauge:#2a78d6;--camera:#eb6834;--ok:#1b7f3b;--warn:#a86400;--bad:#b3261e;--accent:#0b3d5c}
+ --gauge:#2a78d6;--camera:#eb6834;--true:#6b6b6b;--ok:#1b7f3b;--warn:#a86400;--bad:#b3261e;--accent:#0b3d5c;--replay:#7a4d00;--replaybg:#fff4dc}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121211;--surface:#1a1a19;--ink:#f0efec;
- --ink2:#c3c2b7;--line:#33332f;--gauge:#3987e5;--camera:#d95926;--ok:#4fbf6b;--warn:#e0a030;--bad:#ff6b5e;--accent:#9ec5f4}}
+ --ink2:#c3c2b7;--line:#33332f;--gauge:#3987e5;--camera:#d95926;--true:#a0a0a0;--ok:#4fbf6b;--warn:#e0a030;--bad:#ff6b5e;--accent:#9ec5f4;--replay:#ffd27a;--replaybg:#2b2210}}
+:root[data-theme="dark"]{--bg:#121211;--surface:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--line:#33332f;--gauge:#3987e5;--camera:#d95926;
+ --true:#a0a0a0;--ok:#4fbf6b;--warn:#e0a030;--bad:#ff6b5e;--accent:#9ec5f4;--replay:#ffd27a;--replaybg:#2b2210}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
-header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
-header h1{font-size:18px;margin:0;color:var(--accent)} header .sub{color:var(--ink2);font-size:13px}
-main{max-width:1200px;margin:auto;padding:16px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
+header{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
+header h1{font-size:19px;margin:0;color:var(--accent)} .sub{color:var(--ink2);font-size:13px}
+.grow{flex:1 1 auto}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent;padding:6px 14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+.banner{display:none;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 20px;background:var(--replaybg);color:var(--replay);border-bottom:1px solid var(--line);font-size:14px}
+.banner.on{display:flex} .banner select{font:inherit;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.banner input[type=range]{flex:1 1 220px;accent-color:var(--replay)}
+main{max-width:1240px;margin:auto;padding:16px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
 .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink2);margin:0 0 10px}
-.frame img{width:100%;border-radius:6px;display:block;max-height:640px;object-fit:contain;background:#000}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.frame img{width:100%;border-radius:6px;display:block;max-height:620px;object-fit:contain;background:#000}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .tile{border:1px solid var(--line);border-radius:8px;padding:10px}
 .tile .k{font-size:12px;color:var(--ink2)} .tile .v{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums}
 .tile .n{font-size:12px;color:var(--ink2)}
-.pill{display:inline-flex;align-items:center;gap:6px;font-weight:600;padding:2px 10px;border-radius:999px;border:1px solid currentColor}
+.pill{display:inline-flex;align-items:center;font-weight:600;font-size:16px;padding:2px 10px;border-radius:999px;border:1px solid currentColor}
 .normal{color:var(--ok)}.action{color:var(--warn)}.flood{color:var(--bad)}
 .wide{grid-column:1/-1}
-.log{max-height:420px;overflow:auto;font-size:13px}
+.log{max-height:440px;overflow:auto;font-size:13px}
 .ev{border-left:3px solid var(--line);padding:6px 10px;margin:0 0 10px}
 .ev.disagree,.ev.camera_blind{border-color:var(--bad)} .ev.gauge_silent{border-color:var(--warn)} .ev.level_rise{border-color:var(--camera)}
 .ev .t{color:var(--ink2);font-size:12px} .step{margin:2px 0 0 10px;color:var(--ink2)} .step b{color:var(--ink)}
+.act{margin:4px 0 0 10px;font-weight:600}
 .appr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px}
-.appr .msg{flex:1 1 300px} button{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:4px 12px;cursor:pointer}
-button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.appr .msg{flex:1 1 300px} .appr.done{opacity:.6}
+button{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:4px 12px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .muted{color:var(--ink2)} pre{white-space:pre-wrap;margin:6px 0 0;font-size:12px}
-@media(max-width:860px){main{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%} th,td{text-align:left;padding:3px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+footer{max-width:1240px;margin:0 auto 24px;padding:0 16px;color:var(--ink2);font-size:12.5px}
+footer a{color:var(--accent)}
+@media(max-width:860px){main{grid-template-columns:1fr}.now{order:-1}}
 </style>
 </head>
 <body>
 <header><h1>StageSight</h1>
- <span class="sub" id="site">River stage read from a USGS gauge camera with OpenCV 5; an agent checks the gauge.</span>
- <span class="sub" id="updated"></span></header>
+ <span class="sub grow">A river camera that checks its own gauge: OpenCV&nbsp;5 reads the staff plate, an agent decides which instrument to trust, a person approves.</span>
+ <div class="seg" role="group" aria-label="Data source">
+  <button id="m-live" aria-pressed="false">Live</button><button id="m-replay" aria-pressed="false">Replay: 29 Jul 2026 flood</button></div>
+</header>
+<div class="banner" id="banner" role="region" aria-label="Replay controls">
+ <b>REPLAY</b><span>East Branch Delaware River at Hancock, NY · peak 18.08 ft (NWS minor flood) · the agent's real decisions</span>
+ <label>Scenario <select id="scen"></select></label>
+ <button id="play" aria-label="Play or pause">Pause</button>
+ <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Replay time">
+ <span id="rtime" class="sub" style="color:inherit"></span>
+</div>
 <main>
- <section class="card frame"><h2>Latest camera frame</h2>
-  <img id="frame" alt="Latest camera frame. Green marks are plate graduations seen above water, magenta marks are under water, the yellow line is the detected waterline.">
-  <p class="muted" style="font-size:12px;margin:8px 0 0">Green: plate marks visible. Magenta: marks under water. Yellow: waterline.</p></section>
- <section class="card"><h2>Now</h2>
+ <section class="card frame"><h2 id="frame-h">Camera frame</h2>
+  <img id="frame" alt="Camera frame with the reader overlay: green marks are visible above water, magenta marks are under water, the yellow line is the waterline.">
+  <p class="muted" id="legend" style="font-size:12px;margin:8px 0 0">Green: plate marks visible. Magenta: marks under water. Yellow: waterline.</p></section>
+ <section class="card now"><h2>Now</h2>
+  <p class="sub" id="where" style="margin:-4px 0 10px">East Branch Delaware River at Hancock, NY · USGS 01421500</p>
   <div class="tiles">
-   <div class="tile"><div class="k">Camera (OpenCV)</div><div class="v" id="cam">-</div><div class="n" id="camst"></div></div>
-   <div class="tile"><div class="k">USGS gauge sensor</div><div class="v" id="gauge">-</div><div class="n" id="gaugest"></div></div>
-   <div class="tile"><div class="k">Alert level (NWS)</div><div class="v"><span id="level" class="pill">-</span></div><div class="n" id="levels"></div></div>
-   <div class="tile"><div class="k">Agent</div><div class="v" id="events" style="font-size:16px">-</div><div class="n" id="planner"></div></div>
+   <div class="tile"><div class="k">Camera (OpenCV, provisional)</div><div class="v" id="cam" aria-live="polite">–</div><div class="n" id="camst"></div></div>
+   <div class="tile"><div class="k">USGS gauge sensor</div><div class="v" id="gauge">–</div><div class="n" id="gaugest"></div></div>
+   <div class="tile"><div class="k">NWS alert level</div><div class="v"><span id="level" class="pill">–</span></div><div class="n" id="levels"></div></div>
+   <div class="tile"><div class="k">Agent</div><div class="v" id="events" style="font-size:16px">–</div><div class="n" id="planner"></div></div>
   </div>
-  <h2 style="margin-top:16px">Waiting for your approval</h2><div id="approvals" class="muted">Nothing pending.</div>
+  <h2 style="margin-top:16px">Human approval queue</h2><div id="approvals" class="muted" aria-live="polite"></div>
  </section>
- <section class="card wide"><h2>Camera vs gauge</h2><div style="position:relative;height:300px"><canvas id="chart" aria-label="Stage over time: camera and USGS gauge, with NWS action and flood stages"></canvas></div>
+ <section class="card wide"><h2>Camera vs gauge</h2><div style="position:relative;height:300px"><canvas id="chart" role="img" aria-label="Stage over time: camera reading, USGS gauge, and NWS action and flood stages"></canvas></div>
   <details><summary class="muted">Table view</summary><div id="table" class="log"></div></details></section>
- <section class="card"><h2>Agent decision log</h2><div id="log" class="log muted">No events yet.</div></section>
- <section class="card"><h2>Test the endpoint with your own frame</h2>
-  <p class="muted">Upload a frame from this camera; the service reads it and returns the stage.</p>
-  <input type="file" id="upload" accept="image/jpeg,image/png"><pre id="measure"></pre></section>
+ <section class="card"><h2>Agent decision log</h2><div id="log" class="log muted" aria-live="polite"></div></section>
+ <section class="card"><h2>Try the reader</h2>
+  <label class="muted" for="upload">Upload a JPEG from the Hancock staff camera; the live service reads it on AWS Lambda and returns the stage.</label><br>
+  <input type="file" id="upload" accept="image/jpeg,image/png" style="margin-top:8px"><p id="measure" aria-live="polite"></p><pre id="measure-raw" class="muted"></pre></section>
 </main>
+<footer>StageSight is a decision aid, not an official warning system: nothing is sent without a person's approval.
+ Public data: USGS NIMS camera and gage height, NWS flood categories.
+ <a href="https://github.com/Waqar-msx9t/stagesight">Code and technical report</a></footer>
 <script>
 const C = window.STAGESIGHT || {data: "", api: ""};
 const $ = id => document.getElementById(id);
 const ft = v => v == null ? "–" : v.toFixed(2) + " ft";
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const get = k => fetch(C.data + k + "?" + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const getJ = u => fetch(u).then(r => r.ok ? r.json() : null).catch(() => null);
+const when = t => { if(!t) return ""; const d = new Date(t.slice(0,19) + "Z");
+  return d.toLocaleString("en-US", {timeZone: "America/New_York", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false}) + " ET (" + t.slice(11,16) + " UTC)"; };
+const Q = new URLSearchParams(location.search);              // read before the URL is rewritten
+const S = {mode: null, idx: 0, recs: [], playing: false, timer: null, decided: {}, levels: {action: 14, flood: 18}, liveTimer: null};
 let chart;
 
-function esc(s){return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function level(stage){ if(stage == null) return "normal"; return stage >= S.levels.flood ? "flood" : stage >= S.levels.action ? "action" : "normal"; }
 
-async function refresh(){
- const d = await get("latest.json"); if(!d) return;
- $("site").textContent = `${d.site.name} · USGS ${d.site.site_id} · plate datum ${d.site.datum_ft} ft (read by OCR)`;
- $("updated").textContent = "Frame " + (d.frame_time_utc || d.time_utc) + " UTC";
- const c = d.camera || {};
- $("cam").textContent = c.stage_ft != null ? ft(c.stage_ft) : (c.status === "below_plate" ? "< " + ft(c.below_ft) : "–");
- $("camst").textContent = (c.status || "").replace(/_/g, " ") + (c.marks_total ? ` · ${c.marks_visible}/${c.marks_total} marks visible` : "");
- $("gauge").textContent = ft(d.gauge_ft);
- $("gaugest").textContent = d.gauge_ft == null ? "no reading (gauge silent): camera is provisional"
-   : (d.gauge_flagged ? "⚠ flagged by agent: camera is provisional" : "");
- $("gaugest").className = "n" + (d.gauge_flagged || d.gauge_ft == null ? " flood" : "");
- const lvl = d.alert_level || "normal";
- $("level").textContent = lvl; $("level").className = "pill " + lvl;
- $("levels").textContent = `action ${d.action_stage_ft} ft · flood ${d.flood_stage_ft} ft`;
- $("events").textContent = d.events.length ? d.events.join(", ").replace(/_/g, " ") : "watching";
- $("planner").textContent = "planner: " + d.planner;
- $("frame").src = C.data + "latest_overlay.jpg?" + Date.now();
- const s = await get("timeseries.json") || [];
- const labels = s.map(x => x.t.slice(5, 16).replace("T", " "));
- const line = (v, n) => s.map(() => v);
- const data = {labels, datasets: [
-  {label: "USGS gauge sensor", data: s.map(x => x.gauge_ft), borderColor: css("--gauge"), backgroundColor: css("--gauge"), borderWidth: 2, pointRadius: 0, spanGaps: false},
-  {label: "Camera (OpenCV plate read)", data: s.map(x => x.camera_ft), borderColor: css("--camera"), backgroundColor: css("--camera"), showLine: false, pointRadius: 4},
-  {label: "NWS flood stage", data: line(d.flood_stage_ft), borderColor: css("--bad"), borderDash: [6,4], borderWidth: 1, pointRadius: 0},
-  {label: "NWS action stage", data: line(d.action_stage_ft), borderColor: css("--warn"), borderDash: [6,4], borderWidth: 1, pointRadius: 0}]};
+function render(v){
+ const c = v.camera || {};
+ $("frame").src = v.img;
+ const readable = c.status === "ok" || c.status === "below_plate";
+ $("legend").textContent = readable ? "Green: plate marks visible. Magenta: marks under water. Yellow: waterline."
+   : c.status === "unreadable" ? "No plate marks detectable in this frame (night infrared, fog or spray), so the reader gives no number." : "";
+ $("cam").textContent = c.stage_ft != null ? ft(c.stage_ft) : c.status === "below_plate" ? "Below plate" : "No reading";
+ $("camst").textContent = c.status === "ok" ? `${c.marks_visible}/${c.marks_total} marks visible`
+   : c.status === "below_plate" ? `water under the lowest mark (< ${ft(c.below_ft)})`
+   : c.status === "unreadable" ? "marks not visible (night, fog or spray)" : (c.status || "").replace(/_/g, " ");
+ $("gauge").textContent = ft(v.gauge_ft);
+ $("gaugest").textContent = v.gauge_ft == null ? "silent: camera stands in (provisional)" : v.gauge_flagged ? "flagged by the agent: camera stands in" : "";
+ $("gaugest").className = "n" + (v.gauge_flagged || v.gauge_ft == null ? " flood" : "");
+ const lvl = v.alert_level || "normal";
+ $("level").textContent = lvl[0].toUpperCase() + lvl.slice(1); $("level").className = "pill " + lvl;
+ $("levels").textContent = `action ${S.levels.action} ft · flood ${S.levels.flood} ft`;
+ $("events").textContent = v.events.length ? v.events.join(", ").replace(/_/g, " ") : "Watching";
+ $("planner").textContent = "Claude on Amazon Bedrock, rule fallback";
+ const s = v.series;
+ const line = val => s.map(() => val);
+ const ds = [
+  {label: "USGS gauge (as reported)", data: s.map(x => x.gauge_ft), borderColor: css("--gauge"), backgroundColor: css("--gauge"), borderWidth: 2, pointRadius: 0, stepped: true},
+  {label: "Camera (OpenCV)", data: s.map(x => x.camera_ft), borderColor: css("--camera"), backgroundColor: css("--camera"), showLine: false, pointRadius: 4},
+  {label: "NWS flood stage", data: line(S.levels.flood), borderColor: css("--bad"), borderDash: [6,4], borderWidth: 1, pointRadius: 0},
+  {label: "NWS action stage", data: line(S.levels.action), borderColor: css("--warn"), borderDash: [6,4], borderWidth: 1, pointRadius: 0}];
+ if(s.some(x => x.true_ft != null && x.gauge_ft != null && Math.abs(x.true_ft - x.gauge_ft) > 0.05))
+  ds.splice(1, 0, {label: "True stage (held out)", data: s.map(x => x.true_ft), borderColor: css("--true"), borderDash: [2,3], borderWidth: 1.5, pointRadius: 0});
+ const data = {labels: s.map(x => when(x.t).replace(/ \(.*$/, "")), datasets: ds};
  const opts = {responsive: true, maintainAspectRatio: false, animation: false, interaction: {mode: "index", intersect: false},
-  scales: {y: {title: {display: true, text: "Stage (ft)", color: css("--ink2")}, ticks: {color: css("--ink2")}, grid: {color: css("--line")}},
-           x: {ticks: {color: css("--ink2"), maxTicksLimit: 10}, grid: {display: false}}},
-  plugins: {legend: {labels: {color: css("--ink")}}}};
- if(chart){chart.data = data; chart.update();} else chart = new Chart($("chart"), {type: "line", data, options: opts});
- $("table").innerHTML = "<table><tr><th>UTC</th><th>camera</th><th>gauge</th><th>status</th></tr>" +
-   s.slice(-48).reverse().map(x => `<tr><td>${esc(x.t)}</td><td>${ft(x.camera_ft)}</td><td>${ft(x.gauge_ft)}</td><td>${esc(x.status||"")}</td></tr>`).join("") + "</table>";
- const ev = await get("events.json") || [];
- $("log").innerHTML = ev.length ? ev.slice().reverse().map(e => `<div class="ev ${esc(e.event.kind)}">
-   <div class="t">${esc(e.time_utc)} UTC · ${esc(e.planner)}</div><b>${esc(e.event.kind.replace(/_/g," "))}</b>
-   ${e.trace.map(s => s.tool ? `<div class="step">→ <b>${esc(s.tool)}</b> ${esc(JSON.stringify(s.input)).slice(0,220)}</div>`
-                              : `<div class="step">${esc(s.thought || s.note || "")}</div>`).join("")}</div>`).join("") : "No events yet.";
- const ap = await get("approvals.json") || [];
- const pend = ap.filter(a => a.status === "pending_approval");
- $("approvals").innerHTML = pend.length ? pend.slice().reverse().map(a => `<div class="appr">
-   <span class="msg"><b>${a.type === "flag_sensor" ? "Sensor flag: " + esc(a.suspect) : "Draft " + esc(a.level) + " alert"}</b> · ${esc(a.time_utc)}<br>${esc(a.reason || a.message)}</span>
-   <button data-id="${esc(a.id)}" data-d="approve">Approve</button><button data-id="${esc(a.id)}" data-d="reject">Reject</button></div>`).join("") : "Nothing pending.";
+  scales: {y: {suggestedMin: 8, suggestedMax: 19, title: {display: true, text: "Stage (ft)", color: css("--ink2")}, ticks: {color: css("--ink2")}, grid: {color: css("--line")}},
+           x: {ticks: {color: css("--ink2"), maxTicksLimit: 8}, grid: {display: false}}},
+  plugins: {legend: {labels: {color: css("--ink"), filter: i => ds[i.datasetIndex].data.some(y => y != null)}}}};
+ if(chart){chart.data = data; chart.options = opts; chart.update();} else chart = new Chart($("chart"), {type: "line", data, options: opts});
+ $("table").innerHTML = "<table><caption class='sub'>Latest 48 readings</caption><tr><th scope='col'>Time</th><th scope='col'>Camera</th><th scope='col'>Gauge</th><th scope='col'>Reader status</th></tr>" +
+   s.slice(-48).reverse().map(x => `<tr><td>${esc(when(x.t))}</td><td>${ft(x.camera_ft)}</td><td>${ft(x.gauge_ft)}</td><td>${esc((x.status||"").replace(/_/g," "))}</td></tr>`).join("") + "</table>";
+ $("log").innerHTML = v.log.length ? v.log.slice().reverse().map(e => `<div class="ev ${esc(e.event.kind)}">
+   <div class="t">${esc(when(e.time_utc))} · ${esc(e.planner)}</div><b>Event: ${esc(e.event.kind.replace(/_/g," "))}</b>
+   ${e.trace.map(x => x.tool ? `<div class="step">→ <b>${esc(x.tool)}</b> ${esc(JSON.stringify(x.input)).slice(0,200)}</div>`
+                             : `<div class="step">${esc(x.thought || x.note || "").slice(0,600)}</div>`).join("")}</div>`).join("")
+   : S.mode === "live" ? "No events in the live feed. The agent runs only when a reading raises an event (a rise to an NWS level, camera and gauge disagreeing, a silent gauge). Watch it work in Replay."
+   : "No events yet at this point of the replay.";
+ const pend = v.approvals;
+ $("approvals").innerHTML = pend.length ? pend.slice().reverse().map(a => { const d = S.decided[a.id] || (a.status !== "pending_approval" ? a.status : null);
+   return `<div class="appr${d ? " done" : ""}"><span class="msg"><b>${a.type === "flag_sensor" ? "Sensor flag: " + esc(a.suspect).replace("site_gauge","site gauge") : "Draft " + esc(a.level) + " alert"}</b> · ${esc(when(a.time_utc))}<br>${esc(a.reason || a.message)}</span>
+   ${d ? `<b>${esc(d)}</b>` : `<button data-id="${esc(a.id)}" data-d="approve" aria-label="Approve ${esc(a.type)} ${esc(a.id)}">Approve</button><button data-id="${esc(a.id)}" data-d="reject" aria-label="Reject ${esc(a.type)} ${esc(a.id)}">Reject</button>`}</div>`; }).join("")
+   : "Nothing to approve. The agent drafts alerts and sensor flags here; nothing is sent without a person.";
 }
+
+// ---- live: the scheduled Lambda's output in S3
+async function liveView(){
+ const d = await getJ(C.data + "latest.json?" + Date.now());
+ if(!d) return null;
+ S.levels = {action: d.action_stage_ft, flood: d.flood_stage_ft};
+ const [s, ev, ap] = await Promise.all(["timeseries.json", "events.json", "approvals.json"].map(k => getJ(C.data + k + "?" + Date.now())));
+ const series = []; for(const x of (s || [])) if(!series.length || series[series.length-1].t !== x.t) series.push(x);  // one row per frame
+ return {img: C.data + "latest_overlay.jpg?" + Date.now(), camera: d.camera, gauge_ft: d.gauge_ft, gauge_flagged: d.gauge_flagged,
+   alert_level: d.alert_level, events: d.events || [], series, log: ev || [], approvals: (ap || []).filter(a => a.status === "pending_approval")};
+}
+async function showLive(){
+ const v = await liveView();
+ $("frame-h").textContent = "Latest camera frame";
+ if(!v){ $("events").textContent = "Live feed unavailable"; return; }
+ render(v);
+ $("frame-h").textContent = "Latest camera frame · " + when((v.series.at(-1) || {}).t);
+}
+
+// ---- replay: the 29 Jul 2026 flood with the agent's recorded decisions
+function replayView(i){
+ const R = S.recs.slice(0, i + 1), r = R[R.length - 1];
+ const acts = R.flatMap(x => x.actions.map((a, k) => ({...a, id: x.t + "#" + k})));
+ const flagged = acts.some(a => a.type === "flag_sensor" && a.suspect === "site_gauge");
+ // a camera the agent has flagged does not set the alert level; the gauge does
+ const camFlagged = acts.some(a => a.type === "flag_sensor" && a.suspect === "camera");
+ const stage = camFlagged ? r.gauge_ft : (r.camera.stage_ft ?? r.gauge_ft);
+ return {img: "replay/" + r.img, camera: r.camera, gauge_ft: r.gauge_ft, gauge_flagged: flagged, alert_level: level(stage),
+   events: r.events.map(e => e.event.kind),
+   series: R.map(x => ({t: x.t, camera_ft: x.camera.stage_ft, gauge_ft: x.gauge_ft, true_ft: x.true_ft, status: x.camera.status})),
+   log: R.flatMap(x => x.events.map(e => ({time_utc: x.t, ...e}))),
+   approvals: acts.filter(a => a.type === "flag_sensor" || a.type === "draft_alert")};
+}
+function step(i){
+ S.idx = Math.max(0, Math.min(i, S.recs.length - 1)); $("scrub").value = S.idx;
+ $("rtime").textContent = when(S.recs[S.idx].t);
+ $("frame-h").textContent = "Camera frame · " + when(S.recs[S.idx].t);
+ render(replayView(S.idx));
+}
+function play(on){
+ S.playing = on; $("play").textContent = on ? "Pause" : "Play"; clearInterval(S.timer);
+ if(on) S.timer = setInterval(() => { if(S.idx >= S.recs.length - 1) return play(false); step(S.idx + 1); }, 1200);
+}
+async function loadScenario(id){
+ const d = await getJ("replay/" + id + ".json"); if(!d) return;
+ S.recs = d.frames; S.decided = {}; $("scrub").max = S.recs.length - 1;
+ // start a few hours before the first event so the viewer sees the river rise
+ const first = S.recs.findIndex(r => r.events.length); step(Math.max(0, first - 4)); play(true);
+}
+
+async function setMode(m){
+ S.mode = m; play(false); clearInterval(S.liveTimer);
+ $("m-live").setAttribute("aria-pressed", m === "live"); $("m-replay").setAttribute("aria-pressed", m === "replay");
+ $("banner").classList.toggle("on", m === "replay");
+ history.replaceState(null, "", "?mode=" + m + (m === "replay" ? "&s=" + ($("scen").value || Q.get("s") || "flatline") : ""));
+ if(m === "live"){ await showLive(); S.liveTimer = setInterval(showLive, 30000); return; }
+ if(!$("scen").options.length){
+  const idx = await getJ("replay/index.json");
+  if(idx){ S.levels = {action: idx.action_stage_ft, flood: idx.flood_stage_ft};
+    $("scen").innerHTML = idx.scenarios.map(s => `<option value="${esc(s.id)}">${esc(s.label)}</option>`).join(""); }
+  $("scen").value = Q.get("s") || "flatline";
+ }
+ loadScenario($("scen").value);
+}
+
+$("m-live").onclick = () => setMode("live");
+$("m-replay").onclick = () => setMode("replay");
+$("scen").onchange = e => { history.replaceState(null, "", "?mode=replay&s=" + e.target.value); loadScenario(e.target.value); };
+$("play").onclick = () => play(!S.playing);
+$("scrub").oninput = e => { play(false); step(+e.target.value); };
 $("approvals").addEventListener("click", async e => {
  const b = e.target.closest("button"); if(!b) return;
- await fetch(C.api + "/approve", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: b.dataset.id, decision: b.dataset.d})});
- refresh();
+ if(S.mode === "replay"){ S.decided[b.dataset.id] = b.dataset.d === "approve" ? "approved (replay, nothing sent)" : "rejected"; return step(S.idx); }
+ // live decisions need the operator token; it stays in this browser only
+ let tok = null; try { tok = localStorage.getItem("stagesight-operator"); } catch(_) {}
+ if(!tok){ tok = prompt("Operator token (live approvals are limited to the operator):"); if(!tok) return; }
+ const r = await fetch(C.api + "/approve", {method: "POST", headers: {"Content-Type": "application/json", "Authorization": "Bearer " + tok},
+   body: JSON.stringify({id: b.dataset.id, decision: b.dataset.d})});
+ if(r.status === 401){ try { localStorage.removeItem("stagesight-operator"); } catch(_) {} alert("Wrong operator token."); return; }
+ try { localStorage.setItem("stagesight-operator", tok); } catch(_) {}
+ showLive();
 });
 $("upload").addEventListener("change", async e => {
  const f = e.target.files[0]; if(!f) return;
- $("measure").textContent = "reading…";
- const r = await fetch(C.api + "/measure", {method: "POST", body: f});
- $("measure").textContent = JSON.stringify(await r.json(), null, 1);
+ $("measure").textContent = "Reading on AWS Lambda…"; $("measure-raw").textContent = "";
+ try {
+  const r = await fetch(C.api + "/measure", {method: "POST", body: f}); const j = await r.json();
+  $("measure").textContent = j.error ? "Could not read: " + j.error
+    : j.stage_ft != null ? `Stage ${j.stage_ft.toFixed(2)} ft · ${j.marks_visible}/${j.marks_total} marks visible` : "No number: " + String(j.status).replace(/_/g, " ");
+  $("measure-raw").textContent = JSON.stringify(j, null, 1);
+ } catch(err){ $("measure").textContent = "The service did not answer (frame too large or network error)."; }
 });
-refresh(); setInterval(refresh, 30000);   // data changes every 15 min
+
+// open in Replay when the river is low or it is night, so a visitor always sees the system work
+(async () => {
+ const m = Q.get("mode");
+ if(m === "live" || m === "replay") return setMode(m);
+ const d = await getJ(C.data + "latest.json?" + Date.now());
+ setMode(d && d.camera && d.camera.status === "ok" ? "live" : "replay");
+})();
 </script>
 </body>
 </html>

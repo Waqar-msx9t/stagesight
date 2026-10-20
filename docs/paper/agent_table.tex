@@ -1,0 +1,25 @@
+\begin{table}[t]
+\caption{Injected faults on the 29 July flood: runs that caught the fault and median delay (range)}
+\label{tab:agent}
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Fault & Rules & Opus 4.6 & Sonnet 4.6\\
+\midrule
+gauge offset +1 ft & 1/1, 1 h & 1/1, 1 h & 1/1, 1 h\\
+gauge silent 8 h & 1/1, 1 h & 1/1, 1 h & 1/1, 1 h\\
+gauge frozen 10 h & 1/1, 4 h & 1/1, 2 h & 1/1, 2 h\\
+gauge drift to +1.5 ft & 1/1, 8 h & 1/1, 7 h & 1/1, 7 h\\
+debris over plate & 0/1 & 1/1 & 1/1\\
+spray on lens & 0/1 & 1/1 & 1/1\\
+\midrule
+flood alert in every scenario & 1/1 & 1/1 & 1/1\\
+false sensor flags (all runs) & 0 & 0 & 0\\
+\bottomrule
+\multicolumn{4}{@{}p{\columnwidth}@{}}{\scriptsize Rules are deterministic (one run); each Claude model ran
+every scenario 1 times. Delay: hours from the fault start to the gauge flag (silent gauge: to the
+published camera stage). Camera faults: the camera blamed, the healthy gauge not blamed, the bad
+camera stage never published.}
+\end{tabular}
+\end{table}

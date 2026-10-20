@@ -1,8 +1,9 @@
 Third-party material in this repository
 
 - models/crnn_en.onnx: text_recognition_CRNN_EN_2021sep.onnx from the OpenCV Zoo
-  (https://github.com/opencv/opencv_zoo), redistributed unchanged under that
-  repository's license for the model.
-- docs/icons/*.png: AWS Architecture Icons (https://aws.amazon.com/architecture/icons/),
-  used in the architecture diagram as AWS permits for architecture diagrams.
-- Camera frames and gauge data: public U.S. Geological Survey and NOAA/NWS data.
+  (https://github.com/opencv/opencv_zoo), renamed but otherwise unmodified, distributed under
+  the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
+- docs/icons/*.png: AWS Architecture Icons (https://aws.amazon.com/architecture/icons/), used
+  only in the architecture diagram.
+- Camera frames and gage height: U.S. Geological Survey (NIMS and Water Services), public domain.
+  Flood categories for HKCN6: NOAA National Weather Service NWPS, public domain.

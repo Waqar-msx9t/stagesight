@@ -1,9 +1,11 @@
-"""Sanity test on synthetic frames with a known water level (run: python tests/test_synthetic.py)."""
+"""Research mode (cameras without a plate): transect detector and calibration on synthetic frames
+with a known water level. Slow (~1 min); run with: pytest -m research"""
 import os
 import sys
 
 import cv2 as cv
 import numpy as np
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from stagesight import calibrate, vision  # noqa: E402
@@ -31,21 +33,22 @@ def frame(water_row: int, shift: int = 0) -> np.ndarray:
     return img
 
 
-transects = [[[600, 300], [600, 700]], [[700, 300], [700, 700]], [[800, 300], [800, 700]]]
-ref = frame(500)
-aligner = vision.Aligner(ref)
-rows = rng.integers(340, 680, 60)
-stage = 20 - (rows - 340) * 0.03            # higher water = smaller row = larger stage (ft)
-fr, ok = [], 0
-for i, r in enumerate(rows):
-    m = vision.measure(frame(int(r), shift=6 if i % 5 == 0 else 0), transects, aligner)
-    ok += m["status"] == "ok"
-    fr.append(m["fraction"] if m["status"] == "ok" else np.nan)
-fr = np.array(fr)
-good = ~np.isnan(fr)
-model = calibrate.fit(fr[good][:40], stage[good][:40])
-print("frames ok:", ok, "of", len(rows))
-print("test metrics:", calibrate.metrics(stage[good][40:], calibrate.predict(model, fr[good][40:])))
-dark = (frame(500) * 0.1).astype(np.uint8)
-print("dark frame status:", vision.measure(dark, transects, aligner)["status"])
-assert ok >= 55
+@pytest.mark.research
+def test_transects_on_synthetic_frames():
+    transects = [[[600, 300], [600, 700]], [[700, 300], [700, 700]], [[800, 300], [800, 700]]]
+    ref = frame(500)
+    aligner = vision.Aligner(ref)
+    rows = rng.integers(340, 680, 60)
+    stage = 20 - (rows - 340) * 0.03            # higher water = smaller row = larger stage (ft)
+    fr, ok = [], 0
+    for i, r in enumerate(rows):
+        m = vision.measure(frame(int(r), shift=6 if i % 5 == 0 else 0), transects, aligner)
+        ok += m["status"] == "ok"
+        fr.append(m["fraction"] if m["status"] == "ok" else np.nan)
+    fr = np.array(fr)
+    good = ~np.isnan(fr)
+    model = calibrate.fit(fr[good][:40], stage[good][:40])
+    assert ok >= 55
+    assert calibrate.metrics(stage[good][40:], calibrate.predict(model, fr[good][40:]))["rmse"] < 0.1
+    dark = (frame(500) * 0.1).astype(np.uint8)
+    assert vision.measure(dark, transects, aligner)["status"] == "rejected"
