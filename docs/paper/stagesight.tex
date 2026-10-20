@@ -296,6 +296,13 @@ flood lies outside its training range. Two flood frames are regression tests in 
 (17.77 vs 17.61~ft; 12.63 vs 12.47~ft). The 30 test frames are hourly and correlated, so the
 bootstrap interval is optimistic; they come from one flood at one camera.
 
+\textbf{Second event.} The reader never used the 15 daylight frames of the 4--5~September high
+water (gauge 11.63--11.97~ft); only the baselines were trained on them. Scored as a test event
+(OCR datum from frames outside it, 9 of 11 agree on 20~ft), StageSight has 0.34~ft RMSE (95\%
+bootstrap 0.29--0.38~ft), bias $+0.33$~ft, 15 of 15 within 0.5~ft. The water stayed inside one
+gap between two marks, so all 15 readings are the gap midpoint, 12.11~ft: one measurement
+repeated, whose error is set by the mark spacing (\texttt{results/hancock\_plate\_sep/}).
+
 \textbf{Ablations.} A sub-mark edge search inside the bracket gave 0.275~ft RMSE against
 0.257~ft for the midpoint and was not adopted. Using the bracket between two marks as an
 uncertainty interval covered the gauge in only 23--50\% of frames, so we report no intervals.
@@ -313,6 +320,14 @@ Over the 1,863 hourly frames of the 90-day replay (21~July to 18~October) the re
 Fig.~\ref{fig:coverage}); the water was below the plate for 64\% and 33\% were night or
 obscured. The plate is a flood instrument: it reads when the river is high, which is when a
 gauge fault matters most.
+
+\textbf{Real degraded frames.} We searched the archive for daylight frames with the water on the
+plate (gauge $\geq$11~ft, 87 frames) spoiled by rain on the lens, fog or glare. There are none:
+the quality gate rejected no frame and none looks degraded by eye. Over all 1,249 daylight frames
+no frame was rejected or \texttt{unreadable}, so the obscured share above is night infrared only. The one
+real failure is hydraulic: at 29~July 15:00~UTC whitewater ran up the plate and the reader gave
+17.77~ft against 17.14~ft ($+0.63$~ft), the only July test frame outside 0.5~ft
+(\texttt{results/hancock\_real\_faults/}).
 
 \subsection{Agent: injected faults on the real flood}
 The replay feeds the 29~July flood frame by frame and injects four gauge faults and two camera
@@ -382,7 +397,9 @@ Table~\ref{tab:agent} use the code of run~3.
 
 \section{Limitations and Threats to Validity}
 \textbf{One flood, one camera.} The accuracy rests on 30 correlated frames of one event, and the
-agent results on replays of that event; the camera faults are synthetic. \textbf{Ground truth.}
+agent results on replays of that event; the second event (15 frames) stays inside one mark gap.
+The camera faults are synthetic, because the archive holds no real rain, fog or glare frame.
+\textbf{Ground truth.}
 The USGS gauge is the reference, although it is the instrument the system questions.
 \textbf{Night}: infrared frames show the plate but not the red marks (\texttt{unreadable}).
 \textbf{Low water}: below about 11~ft the plate is dry and the camera cannot check the gauge.
