@@ -16,10 +16,12 @@ spray on lens & 0/1 & 3/3 & 3/3\\
 \midrule
 flood alert in every scenario & 1/1 & 3/3 & 3/3\\
 false sensor flags (all runs) & 0 & 0 & 1\\
+healthy camera also flagged & 0 & 3 & 5\\
+alerts drafted by the safety net & 0 & 4 & 3\\
 \bottomrule
 \multicolumn{4}{@{}p{\columnwidth}@{}}{\scriptsize Rules are deterministic (one run); each Claude model ran
 every scenario 3 times. Delay: hours from the fault start to the gauge flag (silent gauge: to the
 published camera stage). Camera faults: the camera blamed, the healthy gauge not blamed, the bad
-camera stage never published.}
+camera stage never published. Last two rows: counts over all runs and gauge-fault scenarios.}
 \end{tabular}
 \end{table}

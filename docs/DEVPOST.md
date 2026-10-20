@@ -10,11 +10,11 @@ StageSight: a river camera that checks its own gauge
 OpenCV 5 reads flood stage off public USGS staff-plate cameras with no gauge data; a Claude agent on AWS decides whether the camera or the gauge is wrong, and a person approves.
 
 ## Thumbnail and gallery (in this order)
-1. `docs/figures/faults.png` cropped to 16:9 (clean, debris, spray: camera vs gauge and the agent's verdict)
+1. `docs/figures/faults.png` cropped to 3:2 (clean, debris, spray: camera vs gauge and the agent's verdict)
 2. `docs/figures/pipeline.png` (the OpenCV 5 pipeline on a real flood frame)
 3. `docs/figures/flood.png` (0.26 ft RMSE through the flood)
 4. `docs/figures/architecture.png`
-5. A screenshot of the live dashboard in replay mode (frozen-gauge scenario, approval queue visible)
+5. `docs/figures/dashboard.png` (the live dashboard replaying the frozen-gauge case)
 6. `docs/figures/timeline.png`
 
 ## About the project
@@ -48,37 +48,44 @@ camera to become a second instrument that can check the first.
   with three evidence tools and four actions. The tools run inside Lambda; Bedrock only chooses
   them. Agent memory, a safety net that always surfaces flood alerts, and a rule fallback on any
   model error came out of testing.
-- **AWS:** two arm64 Lambda functions on Graviton (reader and agent; API, dashboard and replay
-  behind a Function URL), an EventBridge rule every 15 minutes, a private S3 bucket, an IAM role
-  limited to that bucket and Anthropic models, and Bedrock. The zip is built without Docker by
-  cross-installing the Linux arm64 OpenCV 5 wheels. A tick takes a median of 6.3 s (n = 23 CloudWatch runs).
+- **AWS:** two arm64 Lambda functions on Graviton: a reader that also runs the agent, and an API
+  that serves the dashboard, the flood replay and `/measure` behind a Function URL. An EventBridge rule
+  every 15 minutes, a private S3 bucket, Bedrock, and an SNS topic that e-mails approved alerts. The
+  IAM role can write logs, use only that bucket, invoke Anthropic models and publish to that topic.
+  The zip is built without Docker by cross-installing the Linux arm64 OpenCV 5 wheels. A tick takes a
+  median of 6.3 s (n = 23 CloudWatch runs).
+- **EC2 Graviton4 + COOL:** a one-off batch re-reads a camera's archive when a site is set up.
 - The same code runs on a laptop CPU, with a replay that injects faults into the real flood.
 - Tests (pytest) and lint run in GitHub Actions.
 
 ### Results
 - **29 July 2026 flood at Hancock, NY (NWS minor flood, 18.08 ft peak): 0.26 ft RMSE against the
   USGS gauge, 29 of 30 readings within 0.5 ft, with no gauge data.** A linear pixel fit trained on
-  normal flows has 6.3 ft RMSE. The camera follows both flood peaks.
+  a smaller September high water has 6.3 ft RMSE. The camera follows both flood peaks.
 - **Injected faults, repeated runs** (Claude Opus 4.6 and Sonnet 4.6 against a rule baseline):
   Opus 4.6 caught all four gauge faults in 3 of 3 runs (frozen gauge in 2 h vs 4 h for the rules,
-  drift in 7 h vs 8 h) and blamed the camera in both camera faults in 3 of 3 runs. Sonnet 4.6 missed
-  the slow drift in 2 of 3 runs; the report shows it.
+  drift in 7 h vs 8 h) and blamed the camera in both camera faults in 3 of 3 runs. It is not
+  error-free: during the frozen gauge it also flagged the healthy camera at the second peak in 3 of 3
+  runs, and there the flood alert came from the safety net. Sonnet 4.6 missed the slow drift in 2 of 3
+  runs. The report (Table IV) shows all of it.
 - **Camera faults** (debris over the plate, spray on the lens) with a healthy gauge: the rule
   baseline blamed the healthy gauge and published the bad camera stage; Claude blamed the camera.
   In the debris case it noticed the visible marks drop from 11 to 7 while both gauges said the
   river was falling.
 - **90 days of normal operation** (rule planner, 1,863 frames): 0 false sensor flags.
-- **COOL on Graviton4:** on one c8g.xlarge, the Cloud-Optimized OpenCV build reads 59.2 frames/s
-  against 56.9 for pip OpenCV 5.0, with identical stages in all 184 flood frames;
-  connectedComponentsWithStats is 4.9x faster. COOL's DNN text recognizer crashed in 3 of 3 runs,
-  so the one-time OCR setup stays on stock OpenCV (reported in the report).
+- **COOL on Graviton4:** with 16 worker processes a c8g.4xlarge re-reads the whole 90-day archive
+  (1,869 frames) in 4.1 s, about $0.0008 at on-demand prices, scaling almost linearly from 33 frames/s
+  with one worker. COOL gives the same status and stage as pip OpenCV in every frame; it is 4% faster
+  in one process and 4.9x faster in connectedComponentsWithStats, while the batch is NumPy-bound, so
+  the two builds tie there. COOL's DNN text recognizer aborted on c8g.xlarge and ran on c8g.4xlarge;
+  a minimal reproduction is in the repo (report Sec. VI, Table II).
 
 ### Challenges I ran into
 - My first approach, a self-calibrating waterline detector for any camera, reached 0.29 ft MAE
   in range on a close wall but failed on far-bank bridge cameras and could not extrapolate to
   floods. Reading the plate itself solved the flood problem; the far-bank cameras stay in the
   report as failure cases.
-- The OCR dropped the leading "1" of "19"; now only two-digit reads may vote.
+- The OCR dropped the leading "1" of "19"; now only the longest reads in a frame may vote.
 - Claude's first run missed the drift, and its second run drafted no flood alert during a real
   flood because it had forgotten its own gauge flag. I fixed it in code (agent memory and a safety
   net), not in the prompt. In the third run it flagged the frozen gauge for a partly wrong reason;
@@ -91,7 +98,7 @@ camera to become a second instrument that can check the first.
   gauge data, that holds through a flood above every frame used in setup.
 - In both camera-fault replays the agent blamed the right instrument, where fixed thresholds
   blamed the healthy gauge.
-- Honest limits: the reader returns a reason instead of a number when it cannot see, and the
+- Stated limits: the reader returns a reason instead of a number when it cannot see, and the
   report lists the agent's failures.
 
 ### What I learned
@@ -100,33 +107,37 @@ extrapolates and a fitted regression does not. The agent helped where two instru
 disagreed; the safety net and human approval covered its mistakes.
 
 ### What's next for StageSight
-Read night infrared frames from the printed numbers, support more plate designs and the other
-NIMS plate cameras, and send approved alerts through Amazon SNS.
+Read night infrared frames from the printed numbers, and support more plate designs and the other
+NIMS plate cameras.
 
 ### Responsible use
 StageSight is a decision aid, not an official warning system. It uses public USGS and NWS data
-only, sends nothing without a person's approval (live approvals need an operator token), and
+only, sends nothing until a person approves it (then by SNS e-mail; live approvals need an operator
+token), and
 labels a camera stage provisional whenever it stands in for the gauge.
 
 ### Special awards
-- **Best Use of COOL:** the reader runs on AWS Graviton4 with COOL 3.1, measured against stock
-  OpenCV on the same instance with identical output (report Table II, `results/cool/`,
-  `scripts/cool_run.py` reproduces it end to end and terminates the instance).
-- **Agentic Vision:** the OpenCV reading decides what happens next: code turns it into events,
-  and the agent's evidence gathering (re-reading frames, mark counts) changes which instrument is
-  flagged. Evidence: report Sec. V and VII-C, Table III, Fig. 5 to 7, and the replay on the live site.
+- **Best Use of COOL:** the archive batch runs on EC2 Graviton4 with COOL 3.1 (cv2 loaded from
+  /opt/cool, KleidiCV 0.7.0 in the build info), measured against stock OpenCV on the same instances:
+  identical output on 1,869 frames, 454 frames/s with 16 workers, $0.0004 per 1,000 frames, and a
+  DNN crash isolated to one instance size with a minimal reproduction (report Table II,
+  `results/cool/`; `scripts/cool_run.py` launches, measures and terminates the instance).
+- **Agentic Vision:** the OpenCV reading decides what happens next: code turns it into events, and
+  `reread_earlier_frames` re-runs the OpenCV reader and returns mark counts. In the debris case the
+  drop from 11 to 7 visible marks is what made Claude blame the camera instead of the gauge.
+  Evidence: report Sec. V and VII-C, Table IV, Figs. 5 to 7, and the replay on the live site.
 
 ## Built with
-opencv, opencv-dnn, cool, aws-graviton4, onnx, python, numpy, aws-lambda, aws-graviton, amazon-bedrock, claude,
-amazon-s3, amazon-eventbridge, aws-iam, lambda-function-url, usgs-nims, chart.js, pytest,
-github-actions
+opencv, opencv-dnn, cool, onnx, python, numpy, aws-lambda, aws-graviton, amazon-ec2, amazon-bedrock,
+claude, amazon-s3, amazon-sns, amazon-eventbridge, amazon-cloudwatch, aws-iam, lambda-function-url,
+usgs-nims, chart.js, pytest, github-actions
 
 ## Team
 Muhammad Waqar Saleem (solo): computer vision, agent, AWS deployment, evaluation, report.
 
 ## Try it out links
 - Live dashboard and flood replay: https://zkdbpwl26gqzom5j3osjaoi4dy0htqoq.lambda-url.us-east-2.on.aws/
-- Code: https://github.com/Waqar-msx9t/stagesight (make it public before submitting)
+- Code: https://github.com/Waqar-msx9t/stagesight
 
 ## Video demo link
 [unlisted YouTube link, 5 min or less]

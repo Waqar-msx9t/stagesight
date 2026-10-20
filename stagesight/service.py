@@ -141,7 +141,13 @@ def tick(store, reader: SiteReader, world, planner) -> dict:
 
 
 def decide(store, approval_id: str, decision: str, who: str = "operator") -> dict:
-    """Record a human decision on a queued flag or alert. Nothing is sent from here."""
+    """Record a human decision on a queued flag or alert. Nothing is sent from here.
+
+    shortcut: read-modify-write of approvals.json without a lock; a tick writing the queue at the
+    same second could drop a decision. Use an S3 conditional write (If-Match) for multi-operator use.
+    """
+    if decision not in ("approve", "reject"):
+        return {"error": 'decision must be "approve" or "reject"'}
     approvals = storage.get_json(store, "approvals.json", [])
     for a in approvals:
         if a["id"] == approval_id and a["status"] == "pending_approval":
@@ -150,6 +156,15 @@ def decide(store, approval_id: str, decision: str, who: str = "operator") -> dic
             storage.put_json(store, "approvals.json", approvals)
             return a
     return {"error": "not found or already decided"}
+
+
+def record(store, approval_id: str, **fields) -> None:
+    """Add fields (e.g. the SNS result) to a stored approval item."""
+    approvals = storage.get_json(store, "approvals.json", [])
+    for a in approvals:
+        if a["id"] == approval_id:
+            a.update(fields)
+    storage.put_json(store, "approvals.json", approvals)
 
 
 def notify(item: dict, topic_arn: str | None, publish=None) -> dict:
@@ -178,7 +193,7 @@ def notify(item: dict, topic_arn: str | None, publish=None) -> dict:
 
 def measure_bytes(reader: SiteReader, data: bytes) -> dict:
     """API: stage from an uploaded frame of the same camera."""
-    img = cv.imdecode(np.frombuffer(data, np.uint8), cv.IMREAD_COLOR)
+    img = cv.imdecode(np.frombuffer(data, np.uint8), cv.IMREAD_COLOR) if data else None
     if img is None:
         return {"error": "send a JPEG or PNG frame from this camera"}
     r = reader.read(img)

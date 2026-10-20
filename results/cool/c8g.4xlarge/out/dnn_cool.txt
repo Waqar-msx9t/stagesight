@@ -1,0 +1,8 @@
+cv2 5.1.0-dev /opt/cool/python_3.12/site-packages/cv2/python-3.12/cv2.cpython-312-aarch64-linux-gnu.so | python 3.12.3 | aarch64
+model sha256 a84b1f6e11a65c2d733cb0cc1f014aae3f99051e3f11447dc282faa678eee544
+step 1: load model
+step 2: configure
+step 3: recognize
+text: '20'
+step 4: done
+exit 0

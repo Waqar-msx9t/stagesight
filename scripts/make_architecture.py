@@ -95,16 +95,22 @@ def main() -> None:
     badge(ax, 2.85, 2.35, 2)
     arrow(ax, [(6.2, 2.3), (7.65, 2.3), (7.65, 7.5), (8.8, 7.5)])            # 3 event + tool results
     arrow(ax, [(8.8, 7.15), (8.2, 7.15), (8.2, 2.0), (6.2, 2.0)], dashed=True)    # tool calls back
-    badge(ax, 7.25, 6.4, 3)
-    ax.text(7.93, 4.4, "event, tool results", rotation=90, ha="center", va="center", fontsize=8, color=SUB)
+    badge(ax, 7.35, 6.6, 3)
+    ax.text(7.42, 4.4, "event, tool results", rotation=90, ha="center", va="center", fontsize=8, color=SUB)
     ax.text(8.42, 4.4, "tool calls, actions", rotation=90, ha="left", va="center", fontsize=8, color=SUB)
     arrow(ax, [(6.2, 1.72), (8.85, 1.72)])                                    # 4 write
-    badge(ax, 7.9, 1.42, 4)
+    badge(ax, 7.9, 1.36, 4)
     arrow(ax, [(9.85, 2.0), (11.75, 2.0)], both=True)                          # 5 serve / decisions
     badge(ax, 10.8, 2.4, 5)
     arrow(ax, [(12.75, 2.0), (15.15, 2.0)], both=True)                          # 6 HTTPS
     badge(ax, 13.3, 2.4, 6)
     ax.text(14.2, 2.3, "HTTPS", ha="left", va="bottom", fontsize=8, color=SUB)
+    icon(ax, "sns.png", 12.25, 4.4)                                            # 7 e-mail after approval
+    ax.text(11.6, 4.62, "Amazon SNS", ha="right", va="center", fontsize=8.6, fontweight="bold", color=INK)
+    ax.text(11.6, 4.18, "e-mail after approval", ha="right", va="center", fontsize=8, color=SUB)
+    arrow(ax, [(12.25, 2.5), (12.25, 3.9)])
+    arrow(ax, [(12.25, 4.9), (12.25, 5.35), (15.65, 5.35), (15.65, 2.55)])
+    badge(ax, 12.65, 3.2, 7)
 
     issues = figcheck.overlaps(fig, "architecture")
     for ext in ("pdf", "png"):

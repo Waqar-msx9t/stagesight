@@ -103,7 +103,8 @@ def api(event, context):
     if method == "POST" and path == "/approve":
         token = os.environ.get("APPROVE_TOKEN")
         headers = {k.lower(): v for k, v in (event.get("headers") or {}).items()}
-        if token and not hmac.compare_digest(headers.get("authorization", ""), "Bearer " + token):
+        given = headers.get("authorization", "").encode("utf-8", "replace")
+        if not token or not hmac.compare_digest(given, ("Bearer " + token).encode()):   # fail closed
             return _resp(401, {"error": "approvals need the operator token"})
         try:
             req = json.loads(data or b"{}")
@@ -111,8 +112,12 @@ def api(event, context):
             return _resp(400, {"error": "body must be JSON"})
         if not isinstance(req, dict):
             return _resp(400, {"error": "body must be a JSON object"})
-        out = service.decide(store, str(req.get("id")), str(req.get("decision")), str(req.get("who", "operator")))
+        if req.get("decision") not in ("approve", "reject"):
+            return _resp(400, {"error": 'decision must be "approve" or "reject"'})
+        out = service.decide(store, str(req.get("id")), req["decision"], "operator")
         if "error" not in out:
             out = service.notify(out, os.environ.get("ALERT_TOPIC_ARN"))      # approved items only
+            if "sent" in out:
+                service.record(store, out["id"], sent=out["sent"])
         return _resp(404 if "error" in out else 200, out)
     return _resp(404, {"error": f"no route {method} {path}"})

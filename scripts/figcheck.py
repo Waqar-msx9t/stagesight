@@ -46,8 +46,30 @@ def _texts(fig) -> list[Text]:
     return out
 
 
-def _points(fig, r) -> list[tuple[str, np.ndarray]]:
-    """Display-space samples of every data line, scatter and arrow (gridlines and ticks excluded)."""
+def _sample(poly: np.ndarray) -> np.ndarray:
+    if len(poly) < 2:
+        return poly
+    return np.vstack([np.linspace(a, b, max(2, int(np.hypot(*(b - a)) // 2))) for a, b in zip(poly[:-1], poly[1:])])
+
+
+def _markers(fig) -> list[tuple[np.ndarray, float]]:
+    """Centres and radii (px) of every plotted marker."""
+    out = []
+    px = fig.dpi / 72.0
+    for ax in fig.axes:
+        for ln in ax.get_lines():
+            if ln.get_visible() and ln.get_marker() not in (None, "None", "", " ") and ln.get_gid() != "ref":
+                xy = ln.get_transform().transform(ln.get_xydata())
+                out.append((xy[np.isfinite(xy).all(1)], ln.get_markersize() * px / 2))
+        for c in ax.collections:
+            if isinstance(c, PathCollection) and c.get_visible() and len(c.get_offsets()):
+                size = float(np.sqrt(np.max(c.get_sizes()))) if len(c.get_sizes()) else 6.0
+                out.append((c.get_offset_transform().transform(c.get_offsets()), size * px / 2))
+    return out
+
+
+def _points(fig, r) -> list[tuple[str, np.ndarray, float]]:
+    """Display-space samples (with a radius in px) of every data line, marker, arrow and frame."""
     pts = []
     for ax in fig.axes:
         for ln in ax.get_lines():
@@ -55,27 +77,23 @@ def _points(fig, r) -> list[tuple[str, np.ndarray]]:
                 continue
             xy = ln.get_transform().transform(ln.get_xydata())      # units (dates) already converted
             xy = xy[np.isfinite(xy).all(1)]
-            if len(xy) > 1 and ln.get_linestyle() not in ("None", "", " "):
-                seg = [np.linspace(a, b, max(2, int(np.hypot(*(b - a)) // 2))) for a, b in zip(xy[:-1], xy[1:])]
-                xy = np.vstack(seg)
-            pts.append((f"line '{ln.get_label()}'" + (" [ref]" if ln.get_gid() == "ref" else ""), xy))
-        for c in ax.collections:
-            if isinstance(c, PathCollection) and c.get_visible():
-                pts.append(("scatter", c.get_offset_transform().transform(c.get_offsets())))
+            if ln.get_linestyle() not in ("None", "", " "):
+                pts.append((f"line '{ln.get_label()}'" + (" [ref]" if ln.get_gid() == "ref" else ""), _sample(xy), 0.5))
+        for spine in ax.spines.values():                # axis frames: text must not cross or touch them
+            if spine.get_visible() and ax.axison:
+                for poly in spine.get_path().to_polygons(spine.get_transform(), closed_only=False):
+                    pts.append(("axis frame", _sample(poly), 0.5))
+    for xy, rad in _markers(fig):
+        pts.append(("marker", xy, rad))
     for p in fig.findobj(Rectangle):                 # drawn frames (diagram groups), not axes backgrounds
         if p.get_visible() and not p.get_fill() and p.get_linewidth() > 0 and p.axes is not None:
             for poly in p.get_path().to_polygons(p.get_transform()):
-                poly = np.vstack([np.linspace(a, b, max(2, int(np.hypot(*(b - a)) // 2)))
-                                  for a, b in zip(poly[:-1], poly[1:])])
-                pts.append(("frame", poly))
+                pts.append(("frame", _sample(poly), 0.5))
     for p in fig.findobj(FancyArrowPatch):
         if p.get_visible() and p.get_gid() != "allow-overlap":
             # to_polygons honours the path codes (MOVETO, CLOSEPOLY), so heads are not joined to (0, 0)
             for poly in p.get_path().to_polygons(p.get_transform(), closed_only=False):
-                if len(poly) > 1:
-                    poly = np.vstack([np.linspace(a, b, max(2, int(np.hypot(*(b - a)) // 2)))
-                                      for a, b in zip(poly[:-1], poly[1:])])
-                pts.append(("arrow", poly))
+                pts.append(("arrow", _sample(poly), 0.5))
     return pts
 
 
@@ -108,7 +126,7 @@ def overlaps(fig, name: str = "") -> list[str]:
             if A[0] < B[2] and B[0] < A[2] and A[1] < B[3] and B[1] < A[3]:
                 issues.append(f"{name}: {label(a)} overlaps {label(b)}")
     tick_labels = set(_tick_labels(fig)[1])
-    for what, xy in _points(fig, r):
+    for what, xy, rad in _points(fig, r):
         if not len(xy):
             continue
         for a, A in boxes:
@@ -119,8 +137,19 @@ def overlaps(fig, name: str = "") -> list[str]:
             # a label written along its own reference line (gid "on-line") may touch reference lines only
             if isinstance(a, Text) and a.get_gid() == "on-line" and what.endswith("[ref]"):
                 continue
-            c = CLEAR + PAD
+            c = (1.0 if what == "axis frame" else CLEAR + rad) + PAD
             hit = (xy[:, 0] > A[0] - c) & (xy[:, 0] < A[2] + c) & (xy[:, 1] > A[1] - c) & (xy[:, 1] < A[3] + c)
             if hit.any():
                 issues.append(f"{name}: {label(a)} covers {what}")
+    # reference lines (gid "ref", e.g. axvline flags) must not run through data markers
+    refs = [ln for ax in fig.axes for ln in ax.get_lines() if ln.get_gid() == "ref" and ln.get_visible()]
+    for ln in refs:
+        xy = _sample(ln.get_transform().transform(ln.get_xydata()))
+        for centres, rad in _markers(fig):
+            if not len(centres) or ln.get_zorder() < 2:            # drawn under the markers: fine
+                continue
+            d = np.min(np.hypot(*(xy[:, None, :] - centres[None, :, :]).transpose(2, 0, 1)), axis=0)
+            if (d < rad * 0.9).any():
+                issues.append(f"{name}: reference line '{ln.get_label()}' is drawn over a marker")
+                break
     return issues

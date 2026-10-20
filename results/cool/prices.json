@@ -1,0 +1,4 @@
+{"source": "AWS Pricing API (pricing get-products), us-east-2, Linux on-demand, queried 2026-10-20",
+ "ec2_usd_per_hour": {"c8g.xlarge": 0.15896, "c8g.4xlarge": 0.63584},
+ "cool_software_usd_per_hour": {"c8g.xlarge": 0.01, "c8g.4xlarge": 0.04},
+ "cool_software_note": "AWS Marketplace listing prodview-fdvbfiewzuehs; runs were inside the 7-day free trial"}

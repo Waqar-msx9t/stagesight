@@ -2,13 +2,16 @@
 
 OpenCV 5 reads the river stage off the staff plate in a USGS gauge camera, **with no gauge data**.
 An agent (Claude on Amazon Bedrock) compares that reading with the gauge sensor, decides which
-instrument is wrong, and queues sensor flags and flood alerts for a person to approve. It runs live
-on AWS (Lambda on Graviton, EventBridge, S3, Bedrock) and, unchanged, on a laptop CPU.
+instrument is wrong, and queues sensor flags and flood alerts for a person to approve; approved
+items are e-mailed through Amazon SNS. It runs live on AWS (Lambda on Graviton, EventBridge, S3,
+SNS, Bedrock), its archive batch runs on EC2 Graviton4 with COOL, and the same code runs on a laptop CPU.
 
 - **Live dashboard:** https://zkdbpwl26gqzom5j3osjaoi4dy0htqoq.lambda-url.us-east-2.on.aws/
   When the river is low or it is night, it opens a replay of the 29 July 2026 flood with the agent's
   recorded decisions; pick a fault in the scenario menu. `?mode=live` shows the live camera.
-- **Technical report:** [docs/StageSight_report.pdf](docs/StageSight_report.pdf) (5 pages, [LaTeX source](docs/paper/stagesight.tex))
+- **Technical report:** [docs/StageSight_report.pdf](docs/StageSight_report.pdf) ([LaTeX source](docs/paper/stagesight.tex))
+
+![Dashboard replaying the frozen-gauge case](docs/figures/dashboard.png)
 
 ![Pipeline](docs/figures/pipeline.png)
 
@@ -21,54 +24,64 @@ frames with water on the plate, 27 of them above every frame used to train the b
 |---|---|---|---|
 | **StageSight** (plate marks + OCR datum) | none | **0.26** (95% bootstrap 0.20 to 0.31) | **29 of 30** |
 | Plate scale + offset fitted to the gauge | training | 0.37 | 25 of 30 |
-| Linear pixel fit, trained on normal flows | training | 6.31 | 7 of 30 |
+| Linear pixel fit, trained on the 4–5 Sep high water | training | 6.31 | 7 of 30 |
 
 ![Flood](docs/figures/flood.png)
 
-Agent, replaying the same flood with injected faults, 3 runs per Claude model (`results/agent/repeat_summary.json`):
+Agent, replaying the same flood with injected faults, 3 runs per Claude model
+(`results/agent/repeat_summary.json`, report Table IV):
 
 | Fault | Rule baseline | Claude Opus 4.6 | Claude Sonnet 4.6 |
 |---|---|---|---|
-| Gauge offset +1 ft / silent 8 h | caught, 1 h / 1 h | 3/3, 1 h / 3/3, 1 h | 3/3, 1 h / 3/3, 1 h |
+| Gauge offset +1 ft | caught, 1 h | 3/3, 1 h | 3/3, 1 h |
+| Gauge silent 8 h | covered, 1 h | 3/3, 1 h | 3/3, 1 h |
 | Gauge frozen 10 h | caught, 4 h | **3/3, 2 h** | 3/3, 2 h |
 | Gauge drift to +1.5 ft | caught, 8 h | 3/3, 7 h | 1/3, 7 h |
 | Debris over the plate (camera wrong) | blamed the healthy gauge | **3/3 blamed the camera** | 3/3 |
-| Spray on the lens (camera wrong) | blamed the healthy gauge | **3/3 blamed the camera** | 3/3 | Over 90 days of normal operation (1,863 frames) the rule planner raised
-0 false sensor flags. The reader gives a number for 2.4% of all hourly frames: it reads floods; below
-the plate or at night it reports `below_plate` or `unreadable` instead of guessing.
+| Spray on the lens (camera wrong) | blamed the healthy gauge | **3/3 blamed the camera** | 3/3 |
+| Healthy camera also flagged (all runs) | 0 | 3 | 5 |
 
-**COOL on Graviton4** (c8g.xlarge, same 184 frames, `results/cool/`): the Cloud-Optimized OpenCV
-build (COOL 3.1, OpenCV 5.1 + KleidiCV) reads 59.2 frames/s against 56.9 for pip OpenCV 5.0, with
-identical stages in all 184 frames; `connectedComponentsWithStats` is 4.9x and `phaseCorrelate`
-1.25x faster. COOL's DNN text recognizer crashed in 3 of 3 runs, so the one-time OCR setup stays
-on pip OpenCV. Reproduce: `python scripts/cool_run.py` (launches, measures, terminates).
+Claude is not error-free: during the frozen gauge it also flagged the healthy camera at the second
+peak, and there the flood alert came from the safety net. Over 90 days of normal operation (1,863
+frames) the rule planner raised 0 false sensor flags. The reader gives a number for 2.4% of all
+hourly frames: it reads floods; below the plate or at night it reports `below_plate` or
+`unreadable` instead of guessing.
+
+**COOL on Graviton4** (`results/cool/`, report Table II): with 16 worker processes a c8g.4xlarge reads
+the whole 90-day archive (1,869 frames) in 4.1 s, about $0.0008 at on-demand prices, scaling almost
+linearly from 33 frames/s with one worker. COOL 3.1 (OpenCV 5.1 + KleidiCV) gives the same status and
+stage as pip OpenCV 5.0 in every frame, is 4% faster in one process and 4.9x faster in
+`connectedComponentsWithStats`; the batch is NumPy-bound, so both builds tie there. COOL's DNN text
+recognizer aborted on c8g.xlarge and ran on c8g.4xlarge (`scripts/cool_dnn_repro.py`).
 
 ## How it works
 **Reader** (`stagesight/plate.py`, `stagesight/reader.py`)
 - *Setup, once per camera, no gauge data* (`scripts/setup_site.py`): HSV red mask,
   `cv.connectedComponentsWithStats` and `cv.fitLine` find the plate and its marks; the foot marks give
   a 1-D projective map from pixels to feet (fit error 0.05 ft); the printed numbers, read with
-  `cv.dnn.TextRecognitionModel` (OpenCV Zoo CRNN), give the datum (20 ft in 6 of 7 setup frames).
+  `cv.dnn.TextRecognitionModel` (OpenCV Zoo CRNN), give the datum (20 ft in 6 of 7 setup frames,
+  `sites/hancock/site.json`).
 - *Every frame*: quality gate; `cv.phaseCorrelate` re-registers the plate; each mark is visible or
   hidden by its Lab a* contrast against its surround; the waterline is the best visible/hidden split.
 
 **Agent** (`stagesight/agent.py`): code raises an event (camera and gauge disagree, gauge silent,
 camera blind in high water, NWS level reached); only then does Claude run a tool loop:
-`reread_earlier_frames`, `get_site_gauge`, `get_upstream_gauge` (USGS 01417500), then
-`flag_sensor` or `draft_alert` (approval queue), `publish_provisional_stage` or `no_action`.
-Agent memory, a safety net that always surfaces flood alerts, and a rule fallback on any model error.
+`reread_earlier_frames` (re-runs the OpenCV reader, with mark counts), `get_site_gauge`,
+`get_upstream_gauge` (USGS 01417500), then `flag_sensor` or `draft_alert` (approval queue),
+`publish_provisional_stage` or `no_action`. It also keeps agent memory, a safety net that always
+surfaces flood alerts, a time budget, and a rule fallback on any model error.
 
 **AWS** ([diagram](docs/figures/architecture.png)): EventBridge (15 min) → Lambda reader (arm64,
 OpenCV 5, agent loop and tools; each hourly frame processed once) → Bedrock on events → private S3 →
 Lambda API with a Function URL (dashboard, replay, `POST /measure`, `POST /approve` with an operator
-token). Median tick 6.3 s, API 47 ms.
+token) → SNS e-mail after approval. Median tick 6.3 s, API 47 ms (CloudWatch).
 
-## Check it in 10 minutes (fresh clone, no downloads)
+## Check it in 10 minutes (fresh clone)
 ```bash
 uv venv --python 3.12 && source .venv/bin/activate      # Windows: .venv\Scripts\activate
-uv pip install -r requirements.txt pytest
+uv pip install -r requirements.txt pytest==8.4.2
 pytest -q                                                 # plate reader on 2 real flood frames, agent, API
-python scripts/serve_local.py --mode live          # dashboard + flood replay at http://localhost:8000
+python scripts/serve_local.py --mode live                 # http://localhost:8000: live frame + built-in replay
 ```
 
 ## Reproduce every number
@@ -79,35 +92,37 @@ python scripts/flood_stress_test.py --index data/hancock/images.csv --gauge data
     --reference sites/hancock/reference.jpg --cache results/hancock_stack.npz \
     --test-start 2026-07-21 --test-end 2026-08-01 --no-align --out results/hancock_v2      # frame cache
 python scripts/plate_test.py --cache results/hancock_stack.npz --reference sites/hancock/reference.jpg \
-    --test-start 2026-07-21 --test-end 2026-08-01 --out results/hancock_plate             # Table II
-python scripts/replay_agent.py --all --planner rules                               # rule baseline
-bash scripts/repeat_agent_runs.sh && python scripts/agent_stats.py                 # Table III (Bedrock)
+    --test-start 2026-07-21 --test-end 2026-08-01 --out results/hancock_plate             # Table III
+python scripts/replay_agent.py --all --planner rules                                      # rule baseline
+bash scripts/repeat_agent_runs.sh && python scripts/agent_stats.py                        # Table IV (Bedrock)
 python scripts/replay_agent.py --scenario none --start 2026-07-21 --end 2026-10-19 --out results/agent_90d
-uv pip install -r requirements-dev.txt && python scripts/make_figures.py         # docs/figures
-python scripts/cool_run.py && python scripts/cool_stats.py                               # Table II (COOL)
-python scripts/build_replay.py                                                     # web/replay
+python scripts/cool_run.py --instance-type c8g.xlarge                                     # Table II (COOL; needs
+python scripts/cool_run.py --instance-type c8g.4xlarge --scale && python scripts/cool_stats.py  # AWS + COOL subscription)
+uv pip install -r requirements-dev.txt && python scripts/make_figures.py && python scripts/make_architecture.py
+python scripts/build_replay.py                                                            # web/replay
 cd docs/paper && latexmk -pdf stagesight.tex                                              # the report
 ```
-`results/` holds the metrics, traces and summaries behind every number in the report.
+`results/` holds the metrics, traces and summaries behind the report's numbers; the CloudWatch
+latencies are the exception (read from the live functions).
 
 ## Deploy to AWS
 ```bash
-python aws/build_package.py                  # zip with Linux arm64 wheels and the replay, no Docker
-AGENT_BACKEND=bedrock bash aws/deploy.sh     # bucket, IAM role, 2 functions, schedule, Function URL
+python aws/build_package.py                                        # zip with Linux arm64 wheels and the replay
+ALERT_EMAIL=you@example.org AGENT_BACKEND=bedrock bash aws/deploy.sh   # bucket, role, 2 functions, schedule, URL, SNS
 ```
-The role can read and write only the project bucket and invoke Anthropic models on Bedrock. Failed
-ticks are not retried. The first deploy prints the operator token that live approvals need; it is
-stored in the API function's environment.
+The role can write logs, read and write only the project bucket, invoke Anthropic models on Bedrock
+and publish to the one SNS topic. Failed ticks are not retried. The first deploy prints the operator
+token that live approvals need; it is stored in the API function's environment.
 
 ## Repository map
 | Path | What |
 |---|---|
 | `stagesight/plate.py`, `reader.py` | plate reader (report Sec. IV) |
-| `stagesight/agent.py`, `service.py`, `world.py`, `storage.py`, `usgs.py` | agent, live tick, replay world, S3 or local store, USGS and NIMS clients |
+| `stagesight/agent.py`, `service.py`, `world.py`, `storage.py`, `usgs.py` | agent, live tick and alerts, replay world, S3 or local store, USGS and NIMS clients |
 | `stagesight/selfcal.py`, `vision.py`, `calibrate.py`, `scripts/flood_stress_test.py` | research mode for cameras without a plate (report Sec. VIII) and the frame cache |
 | `aws/`, `web/` | Lambda handlers, build and deploy, dashboard and flood replay |
-| `scripts/` | data download, setup, evaluation, repeated agent runs, figures |
-| `results/`, `docs/` | evidence behind every number; report, figures, Devpost text |
+| `scripts/` | data download, setup, evaluation, repeated agent runs, COOL benchmark, figures |
+| `results/`, `docs/` | evidence behind the numbers; report, figures, Devpost text |
 
 ## Limitations
 Needs a plate with red marks in view and daylight; one reading resolves 0.1 to 0.8 ft, set by the

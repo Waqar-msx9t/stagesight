@@ -109,7 +109,10 @@ def test_api_rejects_bad_requests(api):
     auth = {"Authorization": "Bearer secret"}
     assert api("POST", "/approve", b"\xff\xfe", auth)[0] == 400                                # not UTF-8
     assert api("POST", "/approve", b"[1]", auth)[0] == 400                                     # not an object
-    assert api("POST", "/approve", '{"id":"x","who":"操作"}'.encode(), auth, b64=False)[0] == 404   # unicode ok
+    assert api("POST", "/approve", '{"id":"x","decision":"approve","who":"操作"}'.encode(), auth, b64=False)[0] == 404
+    assert api("POST", "/approve", b'{"id":"x"}', auth)[0] == 400                              # no silent reject
+    assert api("POST", "/approve", b'{"id":"x","decision":"approve"}', {"Authorization": "Bearer \xe9"})[0] == 401
+    assert api("POST", "/measure", b"")[0] == 400
     assert api("GET", "/data/../state.json")[0] == 404
     assert api("GET", "/replay/../../handler.py")[0] == 404
     assert json.loads(api("GET", "/data/events.json")[1]) == []                                 # empty, not 404

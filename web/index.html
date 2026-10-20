@@ -47,7 +47,15 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 table{border-collapse:collapse;width:100%} th,td{text-align:left;padding:3px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 footer{max-width:1240px;margin:0 auto 24px;padding:0 16px;color:var(--ink2);font-size:12.5px}
 footer a{color:var(--accent)}
-@media(max-width:860px){main{grid-template-columns:1fr}.now{order:-1}}
+.tile.suspect{border-color:var(--bad);box-shadow:inset 3px 0 0 var(--bad)}
+.status{max-width:1240px;margin:12px auto 0;padding:10px 16px;border-radius:10px;font-weight:650;border:1px solid currentColor}
+.status.normal{color:var(--ok)} .status.action{color:var(--warn)} .status.flood{color:var(--bad)}
+details.step summary{cursor:pointer;color:var(--ink2)} details.step .md{margin:4px 0 6px 12px;color:var(--ink)}
+#story{flex-basis:100%;margin:0;color:inherit} #jumps{display:flex;flex-wrap:wrap;gap:6px;flex-basis:100%}
+#jumps button{font-size:12.5px;padding:3px 9px;border-color:var(--replay);color:var(--replay);background:transparent}
+.banner{position:sticky;top:0;z-index:2}
+.seg button,.appr button,#play{min-height:40px}
+@media(max-width:860px){main{grid-template-columns:1fr}.frame{order:-2}.now{order:-1}.frame img{max-height:45vh}}
 </style>
 </head>
 <body>
@@ -57,12 +65,14 @@ footer a{color:var(--accent)}
   <button id="m-live" aria-pressed="false">Live</button><button id="m-replay" aria-pressed="false">Replay: 29 Jul 2026 flood</button></div>
 </header>
 <div class="banner" id="banner" role="region" aria-label="Replay controls">
- <b>REPLAY</b><span>East Branch Delaware River at Hancock, NY · peak 18.08 ft (NWS minor flood) · the agent's real decisions</span>
+ <b>REPLAY</b><span>East Branch Delaware River at Hancock, NY · peak 18.08 ft (NWS minor flood) · real USGS data, an injected fault, the agent's recorded decisions</span>
  <label>Scenario <select id="scen"></select></label>
  <button id="play" aria-label="Play or pause">Pause</button>
  <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Replay time">
  <span id="rtime" class="sub" style="color:inherit"></span>
+ <p id="story"></p><div id="jumps" aria-label="Jump to an agent action"></div>
 </div>
+<div class="status" id="status" role="status"></div>
 <main>
  <section class="card frame"><h2 id="frame-h">Camera frame</h2>
   <img id="frame" alt="Camera frame with the reader overlay: green marks are visible above water, magenta marks are under water, the yellow line is the waterline.">
@@ -70,8 +80,8 @@ footer a{color:var(--accent)}
  <section class="card now"><h2>Now</h2>
   <p class="sub" id="where" style="margin:-4px 0 10px">East Branch Delaware River at Hancock, NY · USGS 01421500</p>
   <div class="tiles">
-   <div class="tile"><div class="k">Camera (OpenCV, provisional)</div><div class="v" id="cam" aria-live="polite">–</div><div class="n" id="camst"></div></div>
-   <div class="tile"><div class="k">USGS gauge sensor</div><div class="v" id="gauge">–</div><div class="n" id="gaugest"></div></div>
+   <div class="tile" id="cam-tile"><div class="k">Camera (OpenCV, provisional)</div><div class="v" id="cam" aria-live="polite">–</div><div class="n" id="camst"></div></div>
+   <div class="tile" id="gauge-tile"><div class="k">USGS gauge sensor</div><div class="v" id="gauge">–</div><div class="n" id="gaugest"></div></div>
    <div class="tile"><div class="k">NWS alert level</div><div class="v"><span id="level" class="pill">–</span></div><div class="n" id="levels"></div></div>
    <div class="tile"><div class="k">Agent</div><div class="v" id="events" style="font-size:16px">–</div><div class="n" id="planner"></div></div>
   </div>
@@ -81,7 +91,8 @@ footer a{color:var(--accent)}
   <details><summary class="muted">Table view</summary><div id="table" class="log"></div></details></section>
  <section class="card"><h2>Agent decision log</h2><div id="log" class="log muted" aria-live="polite"></div></section>
  <section class="card"><h2>Try the reader</h2>
-  <label class="muted" for="upload">Upload a JPEG from the Hancock staff camera; the live service reads it on AWS Lambda and returns the stage.</label><br>
+  <label class="muted" for="upload">Upload a JPEG from the Hancock staff camera; the live service reads it on AWS Lambda and returns the stage.
+  No frame at hand? <a href="replay/img/sample_2026-07-29T160000.jpg" download="hancock_2026-07-29_1600UTC.jpg">Download a flood frame</a> (29 July, 16:00 UTC; the USGS gauge read 17.61 ft).</label><br>
   <input type="file" id="upload" accept="image/jpeg,image/png" style="margin-top:8px"><p id="measure" aria-live="polite"></p><pre id="measure-raw" class="muted"></pre></section>
 </main>
 <footer>StageSight is a decision aid, not an official warning system: nothing is sent without a person's approval.
@@ -101,6 +112,18 @@ const S = {mode: null, idx: 0, recs: [], playing: false, timer: null, decided: {
 let chart;
 
 function level(stage){ if(stage == null) return "normal"; return stage >= S.levels.flood ? "flood" : stage >= S.levels.action ? "action" : "normal"; }
+const KIND = {disagree: "Camera and gauge disagree", gauge_silent: "Gauge silent", camera_blind: "Camera blind in high water",
+              level_rise: "Rise to an NWS level"};
+const kind = k => KIND[k] || String(k).replace(/_/g, " ");
+// the model writes Markdown: keep headings and bold, drop tables, show the first line as the summary
+function md(s){
+ return esc(s).split("\n").filter(l => !/^\s*\|/.test(l) && l.trim())
+   .map(l => l.replace(/^#+\s*(.*)$/, "<b>$1</b>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")).join("<br>");
+}
+function summary(s){
+ const line = String(s || "").split("\n").map(l => l.replace(/[#*|]/g, "").trim()).find(l => l.length > 3) || "Reasoning";
+ return esc(line.length > 140 ? line.slice(0, 137) + "…" : line);
+}
 
 function render(v){
  const c = v.camera || {};
@@ -109,17 +132,27 @@ function render(v){
  $("legend").textContent = readable ? "Green: plate marks visible. Magenta: marks under water. Yellow: waterline."
    : c.status === "unreadable" ? "No plate marks detectable in this frame (night infrared, fog or spray), so the reader gives no number." : "";
  $("cam").textContent = c.stage_ft != null ? ft(c.stage_ft) : c.status === "below_plate" ? "Below plate" : "No reading";
- $("camst").textContent = c.status === "ok" ? `${c.marks_visible}/${c.marks_total} marks visible`
+ $("camst").textContent = (c.status === "ok" ? `${c.marks_visible}/${c.marks_total} marks visible`
    : c.status === "below_plate" ? `water under the lowest mark (< ${ft(c.below_ft)})`
-   : c.status === "unreadable" ? "marks not visible (night, fog or spray)" : (c.status || "").replace(/_/g, " ");
+   : c.status === "unreadable" ? "marks not visible (night, fog or spray)" : (c.status || "").replace(/_/g, " "))
+   + (v.camera_flagged ? " · flagged by the agent: the gauge sets the alert level" : "")
+   + (v.provisional != null ? ` · agent's provisional stage ${ft(v.provisional)}` : "");
+ $("cam-tile").classList.toggle("suspect", !!v.camera_flagged);
  $("gauge").textContent = ft(v.gauge_ft);
- $("gaugest").textContent = v.gauge_ft == null ? "silent: camera stands in (provisional)" : v.gauge_flagged ? "flagged by the agent: camera stands in" : "";
+ $("gaugest").textContent = v.gauge_ft == null ? "silent: camera stands in (provisional)"
+   : v.gauge_flagged ? `flagged by the agent (${v.gauge_flagged}): camera stands in` : "";
  $("gaugest").className = "n" + (v.gauge_flagged || v.gauge_ft == null ? " flood" : "");
+ $("gauge-tile").classList.toggle("suspect", !!v.gauge_flagged || v.gauge_ft == null);
  const lvl = v.alert_level || "normal";
  $("level").textContent = lvl[0].toUpperCase() + lvl.slice(1); $("level").className = "pill " + lvl;
- $("levels").textContent = `action ${S.levels.action} ft · flood ${S.levels.flood} ft`;
- $("events").textContent = v.events.length ? v.events.join(", ").replace(/_/g, " ") : "Watching";
- $("planner").textContent = "Claude on Amazon Bedrock, rule fallback";
+ $("levels").textContent = S.levels.action != null ? `action ${S.levels.action} ft · flood ${S.levels.flood} ft` : "";
+ $("events").textContent = v.events.length ? v.events.map(kind).join(", ") : "Watching";
+ $("planner").textContent = "Claude on Amazon Bedrock · rule-based fallback";
+ const waiting = v.approvals.filter(a => a.status === "pending_approval" && !S.decided[a.id] && !a.expired).length;
+ $("status").className = "status " + lvl;
+ $("status").textContent = `${lvl.toUpperCase()} · ` + (v.gauge_flagged ? "gauge flagged, camera standing in"
+   : v.camera_flagged ? "camera flagged, gauge trusted" : v.gauge_ft == null ? "gauge silent, camera standing in"
+   : "camera and gauge agree") + ` · ${waiting} item${waiting === 1 ? "" : "s"} awaiting approval`;
  const s = v.series;
  const line = val => s.map(() => val);
  const ds = [
@@ -129,35 +162,41 @@ function render(v){
   {label: "NWS action stage", data: line(S.levels.action), borderColor: css("--warn"), borderDash: [6,4], borderWidth: 1, pointRadius: 0}];
  if(s.some(x => x.true_ft != null && x.gauge_ft != null && Math.abs(x.true_ft - x.gauge_ft) > 0.05))
   ds.splice(1, 0, {label: "True stage (held out)", data: s.map(x => x.true_ft), borderColor: css("--true"), borderDash: [2,3], borderWidth: 1.5, pointRadius: 0});
- const data = {labels: s.map(x => when(x.t).replace(/ \(.*$/, "")), datasets: ds};
+ if(s.some(x => x.acted))
+  ds.push({label: "Agent acted", data: s.map(x => x.acted ? (x.gauge_ft ?? x.camera_ft) : null), showLine: false,
+           pointStyle: "triangle", pointRadius: 8, borderColor: css("--ink"), backgroundColor: css("--accent")});
+ const data = {labels: s.map(x => x.gap ? "night" : when(x.t).replace(/ \(.*$/, "")), datasets: ds};
  const opts = {responsive: true, maintainAspectRatio: false, animation: false, interaction: {mode: "index", intersect: false},
   scales: {y: {suggestedMin: 8, suggestedMax: 19, title: {display: true, text: "Stage (ft)", color: css("--ink2")}, ticks: {color: css("--ink2")}, grid: {color: css("--line")}},
            x: {ticks: {color: css("--ink2"), maxTicksLimit: 8}, grid: {display: false}}},
   plugins: {legend: {labels: {color: css("--ink"), filter: i => ds[i.datasetIndex].data.some(y => y != null)}}}};
  if(chart){chart.data = data; chart.options = opts; chart.update();} else chart = new Chart($("chart"), {type: "line", data, options: opts});
  $("table").innerHTML = "<table><caption class='sub'>Latest 48 readings</caption><tr><th scope='col'>Time</th><th scope='col'>Camera</th><th scope='col'>Gauge</th><th scope='col'>Reader status</th></tr>" +
-   s.slice(-48).reverse().map(x => `<tr><td>${esc(when(x.t))}</td><td>${ft(x.camera_ft)}</td><td>${ft(x.gauge_ft)}</td><td>${esc((x.status||"").replace(/_/g," "))}</td></tr>`).join("") + "</table>";
+   s.filter(x => !x.gap).slice(-48).reverse().map(x => `<tr><td>${esc(when(x.t))}</td><td>${ft(x.camera_ft)}</td><td>${ft(x.gauge_ft)}</td><td>${esc((x.status||"").replace(/_/g," "))}</td></tr>`).join("") + "</table>";
  $("log").innerHTML = v.log.length ? v.log.slice().reverse().map(e => `<div class="ev ${esc(e.event.kind)}">
-   <div class="t">${esc(when(e.time_utc))} · ${esc(e.planner)}</div><b>Event: ${esc(e.event.kind.replace(/_/g," "))}</b>
-   ${e.trace.map(x => x.tool ? `<div class="step">→ <b>${esc(x.tool)}</b> ${esc(JSON.stringify(x.input)).slice(0,200)}</div>`
-                             : `<div class="step">${esc(x.thought || x.note || "").slice(0,600)}</div>`).join("")}</div>`).join("")
+   <div class="t">${esc(when(e.time_utc))} · ${e.planner === "claude" ? "Claude" : "rule planner"}</div><b>${esc(kind(e.event.kind))}</b>
+   ${e.trace.map(x => x.tool ? `<div class="step">→ <b>${esc(x.tool)}</b> ${esc(JSON.stringify(x.input).slice(0, 160))}</div>`
+       : x.thought ? `<details class="step"><summary>${summary(x.thought)}</summary><div class="md">${md(x.thought)}</div></details>`
+       : `<div class="step"><i>${esc(x.note || "")}</i></div>`).join("")}</div>`).join("")
    : S.mode === "live" ? "No events in the live feed. The agent runs only when a reading raises an event (a rise to an NWS level, camera and gauge disagreeing, a silent gauge). Watch it work in Replay."
    : "No events yet at this point of the replay.";
  const pend = v.approvals;
- $("approvals").innerHTML = pend.length ? pend.slice().reverse().map(a => { const d = S.decided[a.id] || (a.status !== "pending_approval" ? a.status : null);
+ $("approvals").innerHTML = pend.length ? pend.slice().reverse().map(a => { const d = S.decided[a.id] || (a.expired ? "expired: the river is below this level now" : null) || (a.status !== "pending_approval" ? a.status : null);
    return `<div class="appr${d ? " done" : ""}"><span class="msg"><b>${a.type === "flag_sensor" ? "Sensor flag: " + esc(a.suspect).replace("site_gauge","site gauge") : "Draft " + esc(a.level) + " alert"}</b> · ${esc(when(a.time_utc))}<br>${esc(a.reason || a.message)}</span>
-   ${d ? `<b>${esc(d)}</b>` : `<button data-id="${esc(a.id)}" data-d="approve" aria-label="Approve ${esc(a.type)} ${esc(a.id)}">Approve</button><button data-id="${esc(a.id)}" data-d="reject" aria-label="Reject ${esc(a.type)} ${esc(a.id)}">Reject</button>`}</div>`; }).join("")
+   ${d ? `<b>${esc(d)}</b>` : (n => `<button data-id="${esc(a.id)}" data-d="approve" aria-label="Approve ${n}">Approve</button><button data-id="${esc(a.id)}" data-d="reject" aria-label="Reject ${n}">Reject</button>`)(a.type === "flag_sensor" ? "sensor flag" : esc(a.level) + " alert")}</div>`; }).join("")
+   + `<p class="sub">Times inside the agent's notes are UTC.</p>`
    : "Nothing to approve. The agent drafts alerts and sensor flags here; nothing is sent without a person.";
 }
 
 // ---- live: the scheduled Lambda's output in S3
 async function liveView(){
  const d = await getJ(C.data + "latest.json?" + Date.now());
- if(!d) return null;
+ if(!d || !d.camera) return null;                     // nothing published yet
  S.levels = {action: d.action_stage_ft, flood: d.flood_stage_ft};
  const [s, ev, ap] = await Promise.all(["timeseries.json", "events.json", "approvals.json"].map(k => getJ(C.data + k + "?" + Date.now())));
  const series = []; for(const x of (s || [])) if(!series.length || series[series.length-1].t !== x.t) series.push(x);  // one row per frame
- return {img: C.data + "latest_overlay.jpg?" + Date.now(), camera: d.camera, gauge_ft: d.gauge_ft, gauge_flagged: d.gauge_flagged,
+ return {img: C.data + "latest_overlay.jpg?" + Date.now(), camera: d.camera, gauge_ft: d.gauge_ft,
+   gauge_flagged: d.gauge_flagged ? "awaiting approval" : null, camera_flagged: false, provisional: d.provisional_ft ?? null,
    alert_level: d.alert_level, events: d.events || [], series, log: ev || [], approvals: (ap || []).filter(a => a.status === "pending_approval")};
 }
 async function showLive(){
@@ -172,29 +211,46 @@ async function showLive(){
 function replayView(i){
  const R = S.recs.slice(0, i + 1), r = R[R.length - 1];
  const acts = R.flatMap(x => x.actions.map((a, k) => ({...a, id: x.t + "#" + k})));
- const flagged = acts.some(a => a.type === "flag_sensor" && a.suspect === "site_gauge");
- // a camera the agent has flagged does not set the alert level; the gauge does
- const camFlagged = acts.some(a => a.type === "flag_sensor" && a.suspect === "camera");
- const stage = camFlagged ? r.gauge_ft : (r.camera.stage_ft ?? r.gauge_ft);
- return {img: "replay/" + r.img, camera: r.camera, gauge_ft: r.gauge_ft, gauge_flagged: flagged, alert_level: level(stage),
-   events: r.events.map(e => e.event.kind),
-   series: R.map(x => ({t: x.t, camera_ft: x.camera.stage_ft, gauge_ft: x.gauge_ft, true_ft: x.true_ft, status: x.camera.status})),
-   log: R.flatMap(x => x.events.map(e => ({time_utc: x.t, ...e}))),
-   approvals: acts.filter(a => a.type === "flag_sensor" || a.type === "draft_alert")};
+ const live = a => S.decided[a.id] !== "rejected";                  // a rejected flag no longer counts
+ const gaugeFlag = acts.filter(a => a.type === "flag_sensor" && a.suspect === "site_gauge" && live(a)).at(-1);
+ const camFlag = acts.filter(a => a.type === "flag_sensor" && a.suspect === "camera" && live(a)).at(-1);
+ const prov = acts.filter(a => a.type === "publish_provisional_stage").at(-1);
+ const provisional = prov && (gaugeFlag || r.gauge_ft == null) ? prov.stage_ft : null;
+ // the stage that sets the alert level: the agent's provisional stage, else the trusted instrument
+ const stage = provisional ?? (camFlag ? r.gauge_ft : (r.camera.stage_ft ?? r.gauge_ft));
+ const series = [];
+ R.forEach((x, k) => {
+  if(k && (new Date(x.t + "Z") - new Date(R[k - 1].t + "Z")) > 2 * 3600e3) series.push({gap: true});   // night
+  series.push({t: x.t, camera_ft: x.camera.stage_ft, gauge_ft: x.gauge_ft, true_ft: x.true_ft, status: x.camera.status,
+               acted: x.actions.some(a => a.type !== "no_action")});
+ });
+ const approvals = acts.filter(a => a.type === "flag_sensor" || a.type === "draft_alert")
+   .map(a => ({...a, expired: a.type === "draft_alert" && stage != null && stage < (S.levels[a.level] ?? 0) - 0.5}));
+ return {img: "replay/" + r.img, camera: r.camera, gauge_ft: r.gauge_ft, alert_level: level(stage), provisional,
+   gauge_flagged: gaugeFlag ? (S.decided[gaugeFlag.id] ? "approved" : "awaiting approval") : null,
+   camera_flagged: !!camFlag, events: r.events.map(e => e.event.kind), series,
+   log: R.flatMap(x => x.events.map(e => ({time_utc: x.t, ...e}))), approvals};
 }
 function step(i){
  S.idx = Math.max(0, Math.min(i, S.recs.length - 1)); $("scrub").value = S.idx;
  $("rtime").textContent = when(S.recs[S.idx].t);
  $("frame-h").textContent = "Camera frame · " + when(S.recs[S.idx].t);
  render(replayView(S.idx));
+ const next = S.recs[S.idx + 1]; if(next) new Image().src = "replay/" + next.img;      // smooth playback
 }
 function play(on){
  S.playing = on; $("play").textContent = on ? "Pause" : "Play"; clearInterval(S.timer);
+ for(const id of ["cam", "log", "approvals"]) $(id).setAttribute("aria-live", on ? "off" : "polite");
  if(on) S.timer = setInterval(() => { if(S.idx >= S.recs.length - 1) return play(false); step(S.idx + 1); }, 1200);
 }
 async function loadScenario(id){
- const d = await getJ("replay/" + id + ".json"); if(!d) return;
+ const d = await getJ("replay/" + id + ".json"); if(!d) return loadScenario("flatline");
  S.recs = d.frames; S.decided = {}; $("scrub").max = S.recs.length - 1;
+ $("story").textContent = d.fault ? `Injected fault: ${d.label}, from ${when(d.fault[1])}. Watch what the agent does.`
+   : "No fault: the 29 July flood as it happened. The agent drafts the NWS alerts.";
+ $("jumps").innerHTML = S.recs.map((r, k) => r.actions.some(a => a.type !== "no_action") ?
+   `<button data-i="${k}">${esc(when(r.t).split(" ET")[0])}: ${esc(r.actions.filter(a => a.type !== "no_action").map(a =>
+     a.type === "flag_sensor" ? "flag " + a.suspect.replace("site_gauge", "gauge") : a.type === "draft_alert" ? a.level + " alert" : "provisional stage").join(", "))}</button>` : "").join("");
  // start a few hours before the first event so the viewer sees the river rise
  const first = S.recs.findIndex(r => r.events.length); step(Math.max(0, first - 4)); play(true);
 }
@@ -210,6 +266,7 @@ async function setMode(m){
   if(idx){ S.levels = {action: idx.action_stage_ft, flood: idx.flood_stage_ft};
     $("scen").innerHTML = idx.scenarios.map(s => `<option value="${esc(s.id)}">${esc(s.label)}</option>`).join(""); }
   $("scen").value = Q.get("s") || "flatline";
+  if(!$("scen").value) $("scen").value = "flatline";          // unknown ?s= falls back
  }
  loadScenario($("scen").value);
 }
@@ -219,16 +276,20 @@ $("m-replay").onclick = () => setMode("replay");
 $("scen").onchange = e => { history.replaceState(null, "", "?mode=replay&s=" + e.target.value); loadScenario(e.target.value); };
 $("play").onclick = () => play(!S.playing);
 $("scrub").oninput = e => { play(false); step(+e.target.value); };
+$("jumps").addEventListener("click", e => { const b = e.target.closest("button"); if(b){ play(false); step(+b.dataset.i); } });
 $("approvals").addEventListener("click", async e => {
  const b = e.target.closest("button"); if(!b) return;
  if(S.mode === "replay"){ S.decided[b.dataset.id] = b.dataset.d === "approve" ? "approved (replay, nothing sent)" : "rejected"; return step(S.idx); }
- // live decisions need the operator token; it stays in this browser only
- let tok = null; try { tok = localStorage.getItem("stagesight-operator"); } catch(_) {}
- if(!tok){ tok = prompt("Operator token (live approvals are limited to the operator):"); if(!tok) return; }
- const r = await fetch(C.api + "/approve", {method: "POST", headers: {"Content-Type": "application/json", "Authorization": "Bearer " + tok},
-   body: JSON.stringify({id: b.dataset.id, decision: b.dataset.d})});
- if(r.status === 401){ try { localStorage.removeItem("stagesight-operator"); } catch(_) {} alert("Wrong operator token."); return; }
- try { localStorage.setItem("stagesight-operator", tok); } catch(_) {}
+ // live decisions need the operator token (not on the laptop server); it stays in this browser only
+ let tok = "local"; if(C.api !== "api"){ try { tok = localStorage.getItem("stagesight-operator"); } catch(_) {}
+   if(!tok){ tok = prompt("Operator token (live approvals are limited to the operator):"); if(!tok) return; } }
+ try {
+  const r = await fetch(C.api + "/approve", {method: "POST", headers: {"Content-Type": "application/json", "Authorization": "Bearer " + tok},
+    body: JSON.stringify({id: b.dataset.id, decision: b.dataset.d})});
+  if(r.status === 401){ try { localStorage.removeItem("stagesight-operator"); } catch(_) {} alert("Wrong operator token."); return; }
+  if(!r.ok){ const j = await r.json().catch(() => ({})); alert("Not recorded: " + (j.error || r.status)); return; }
+  try { localStorage.setItem("stagesight-operator", tok); } catch(_) {}
+ } catch(err){ alert("The service did not answer; nothing was recorded."); return; }
  showLive();
 });
 $("upload").addEventListener("change", async e => {

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -201,6 +202,7 @@ class ClaudePlanner:
     """Claude decides which evidence to gather and which actions to take (manual tool loop)."""
 
     name = "claude"
+    BUDGET_S = 100      # per event: 100 s + one 80 s call stays inside the 300 s Lambda timeout
 
     def __init__(self, backend: str | None = None, model: str | None = None, max_steps: int = 8):
         backend = backend or os.environ.get("AGENT_BACKEND", "bedrock")
@@ -209,7 +211,7 @@ class ClaudePlanner:
             from anthropic import AnthropicBedrock
             self.client = AnthropicBedrock(   # new accounts have low request quotas: retry patiently,
                 aws_region=os.environ.get("BEDROCK_REGION", os.environ.get("AWS_REGION", "us-east-1")),
-                max_retries=6, timeout=90)    # but always inside the 300 s Lambda timeout
+                max_retries=1, timeout=40)    # worst case per call 80 s; see BUDGET_S below
             self.model = model or os.environ.get("AGENT_MODEL", "global.anthropic.claude-opus-4-6-v1")
         else:
             import anthropic
@@ -223,7 +225,12 @@ class ClaudePlanner:
         trace = []
         messages = [{"role": "user", "content": "Event from the OpenCV monitor:\n" + json.dumps(event, indent=1)}]
         import anthropic
+        t0 = time.monotonic()
         for _ in range(self.max_steps):
+            if time.monotonic() - t0 > self.BUDGET_S:
+                # the 300 s Lambda must still write its results: hand the event to the rules
+                trace.append({"note": "model time budget used up; rule planner used"})
+                return trace + self.fallback.handle(event, tools)
             try:
                 resp = self.client.messages.create(
                     model=self.model, max_tokens=8000, system=SYSTEM, tools=TOOL_SPECS,

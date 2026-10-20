@@ -3,10 +3,13 @@
 % prose that depends on the repeated runs (results/agent/repeat_summary.json, scripts/agent_stats.py)
 \newcommand{\AgentAbstract}{In three replays of each injected fault, Claude Opus~4.6 caught all
 four gauge faults and blamed the camera in both camera-fault cases in every run, where a rule
-baseline blamed the healthy gauge; Claude Sonnet~4.6 missed a slow gauge drift in two of three runs.}
-\newcommand{\AgentResults}{Opus~4.6 handled every scenario in all three runs, with the same
-delays each time; it flagged the frozen gauge after 2~h against 4~h for the rules
-(Fig.~\ref{fig:timeline}) and the drift 1~h earlier. Sonnet~4.6 matched it except on the slow
-drift: in two of three runs it blamed the camera instead of the gauge, and one of those runs also
-flagged the camera before the fault began. In one Sonnet run Bedrock answered once with
-\texttt{ServiceUnavailable}; the rule planner decided that event, as designed.}
+baseline blamed the healthy gauge; it also flagged the healthy camera during a frozen gauge, and
+Claude Sonnet~4.6 missed a slow gauge drift in two of three runs.}
+\newcommand{\AgentResults}{Opus~4.6 caught every fault in all three runs with the same delays;
+it flagged the frozen gauge after 2~h against 4~h for the rules (Fig.~\ref{fig:timeline}) and the
+drift 1~h earlier. It was not error-free: in the frozen-gauge case it also flagged the healthy
+camera at the second peak in all three runs (Sec.~\ref{sec:history}), and in that case the
+flood alert came from the safety net, not from Claude. Sonnet~4.6 made the same camera error and,
+on the slow drift, blamed the camera instead of the gauge in two of three runs, once before the
+fault began. In one Sonnet run Bedrock answered once with \texttt{ServiceUnavailable}; the rule
+planner decided that event, as designed.}

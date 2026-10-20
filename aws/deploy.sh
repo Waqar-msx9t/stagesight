@@ -97,5 +97,12 @@ $AWS events put-targets --rule "$RULE" --targets "Id=tick,Arn=$FN_ARN" >/dev/nul
 $AWS lambda add-permission --function-name "$FN_TICK" --statement-id eventbridge \
   --action lambda:InvokeFunction --principal events.amazonaws.com --source-arn "$RULE_ARN" >/dev/null 2>&1 || true
 
+# 6. keep the API warm during judging: a GET every 5 minutes avoids the ~4 s cold start
+API_ARN=$($AWS lambda get-function --function-name "$FN_API" --query Configuration.FunctionArn --output text)
+WARM_ARN=$($AWS events put-rule --name stagesight-keep-warm --schedule-expression "rate(5 minutes)" --query RuleArn --output text)
+printf '[{"Id":"warm","Arn":"%s","Input":"{\\"rawPath\\":\\"/latest\\",\\"requestContext\\":{\\"http\\":{\\"method\\":\\"GET\\"}}}"}]' "$API_ARN" > build/warm_targets.json
+$AWS events put-targets --rule stagesight-keep-warm --targets file://build/warm_targets.json >/dev/null
+$AWS lambda add-permission --function-name "$FN_API" --statement-id keep-warm   --action lambda:InvokeFunction --principal events.amazonaws.com --source-arn "$WARM_ARN" >/dev/null 2>&1 || true
+
 echo "== deployed. Dashboard and API: $URL"
-[ -n "${NEW_TOKEN:-}" ] && echo "== operator token for approvals (keep it private): $APPROVE_TOKEN"
+if [ -n "${NEW_TOKEN:-}" ]; then echo "== operator token for approvals (keep it private): $APPROVE_TOKEN"; fi

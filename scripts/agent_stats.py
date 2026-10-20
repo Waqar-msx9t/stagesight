@@ -23,6 +23,21 @@ def camera_ok(s: dict) -> bool:
     return s.get("blamed_camera", 0) > 0 and s.get("blamed_gauge", 0) == 0 and s.get("published_bad_camera", 0) == 0
 
 
+def wrong_instrument(run: dict) -> int:
+    """Gauge-fault scenarios in which the healthy camera was flagged as well."""
+    return sum(any(sus == "camera" for _, sus in v["flags"]) for v in run.values()
+               if v.get("fault") and not v["fault"]["kind"].startswith("camera:"))
+
+
+def safety_net_alerts(run_dir: str) -> int:
+    """Alert drafts added by the safety net because the planner itself drafted none."""
+    n = 0
+    for f in glob.glob(os.path.join(run_dir, "*", "trace.jsonl")):
+        for line in open(f):
+            n += sum(1 for a in json.loads(line)["actions"] if a.get("safety_net"))
+    return n
+
+
 def load(pattern: str) -> list[dict]:
     runs = []
     for d in sorted(glob.glob(os.path.join(AGENT, pattern))):
@@ -73,6 +88,13 @@ def main() -> None:
     rows.append(("flood alert in every scenario", ["1/1" if all(rules[s]["flood_alert"] for s in rules) else "0/1"]
                  + [f"{alerts[m]}/{n}" for m, _ in MODELS]))
     rows.append(("false sensor flags (all runs)", [str(false_flags[0])] + [str(ff[m]) for m, _ in MODELS]))
+    wrong = {m: sum(wrong_instrument(r) for r in models[m]) for m, _ in MODELS}
+    nets = {m: sum(safety_net_alerts(d) for d in sorted(glob.glob(os.path.join(AGENT, f"claude_{m}_r*")))[:n])
+            for m, _ in MODELS}
+    rows.append(("healthy camera also flagged", [str(wrong_instrument(rules))] + [str(wrong[m]) for m, _ in MODELS]))
+    rows.append(("alerts drafted by the safety net", [str(safety_net_alerts(os.path.join(AGENT, "rules")))]
+                 + [str(nets[m]) for m, _ in MODELS]))
+    summary.update(healthy_camera_also_flagged=wrong, safety_net_alerts=nets)
     summary.update(false_flags=ff, flood_alert_runs=alerts, fallbacks=fallbacks,
                    tokens_in_per_run=tokens, tokens_out_per_run=tokens_out)
 
@@ -93,7 +115,7 @@ def main() -> None:
 \multicolumn{{4}}{{@{{}}p{{\columnwidth}}@{{}}}}{{\scriptsize Rules are deterministic (one run); each Claude model ran
 every scenario {n} times. Delay: hours from the fault start to the gauge flag (silent gauge: to the
 published camera stage). Camera faults: the camera blamed, the healthy gauge not blamed, the bad
-camera stage never published.}}
+camera stage never published. Last two rows: counts over all runs and gauge-fault scenarios.}}
 \end{{tabular}}
 \end{{table}}
 """

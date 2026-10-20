@@ -32,11 +32,11 @@ Classical OpenCV~5 operations and the OpenCV DNN text recognizer read the stage 
 printed marks and numbers, \emph{without any gauge data}. On the 29~July 2026 flood at Hancock,
 NY (USGS 01421500; NWS minor flood, 18.08~ft peak), the camera agrees with the USGS gauge to
 0.26~ft RMSE (95\% bootstrap interval 0.20--0.31~ft; 29 of 30 readings within 0.5~ft), whereas a
-regression trained on normal flows has 6.3~ft RMSE. An event-gated agent (Claude on Amazon
+regression trained on a smaller September high water has 6.3~ft RMSE. An event-gated agent (Claude on Amazon
 Bedrock) compares camera and gauge, gathers evidence with tools, and queues sensor flags and
-flood alerts for human approval. \AgentAbstract{} The system runs live on AWS Lambda (Graviton), EventBridge, S3 and Bedrock,
-and unchanged on a laptop CPU; on Graviton4 the Cloud-Optimized OpenCV build (COOL) reads 59
-frames/s with output identical to stock OpenCV.
+flood alerts for human approval. \AgentAbstract{} The system runs live on AWS Lambda (Graviton), EventBridge, S3, SNS and
+Bedrock, and unchanged on a laptop CPU; on Graviton4 the Cloud-Optimized OpenCV build (COOL)
+gives output identical to stock OpenCV.
 \end{abstract}
 
 \section{Introduction}
@@ -51,15 +51,15 @@ API~\cite{nims}. Published camera methods measure stage from such images with de
 segmentation and photogrammetry~\cite{eltner2021,blanch2026}, learned
 regression~\cite{vandaele2021,xu2025}, or purpose-built staff-gauge and stage-camera
 systems~\cite{sabbatini2021,noto2022}. They need surveyed control points, dedicated cameras, or
-training labels from the very gauge one would want to check. None uses the camera to
-\emph{audit} the gauge.
+training labels from the very gauge one would want to check. We found none that uses the camera
+to \emph{audit} the gauge.
 
 \textbf{Contributions.}
 \begin{enumerate}
 \item A gauge-free reader for existing staff-plate cameras: the plate's own marks give a 1-D
 projective pixel-to-feet map, the printed foot numbers (read with \cv{dnn.TextRecognitionModel})
-give the datum, and per-mark color contrast gives the waterline. It reads a flood above every
-frame used in setup at 0.26~ft RMSE, and it returns a status instead of a guess when it cannot see.
+give the datum, and per-mark color contrast gives the waterline. It reads a flood higher than any
+water level seen in setup at 0.26~ft RMSE, and it returns a status instead of a guess when it cannot see.
 \item An event-gated agent that arbitrates between two instruments: code detects disagreement,
 silence, blindness and flood levels; only then does Claude gather evidence (earlier frames, gauge
 history, an upstream gauge) and act. A rule planner with the same tools is the baseline.
@@ -126,7 +126,7 @@ by geometry extrapolate along the plate where a free polynomial would not.
 digits beside each foot mark are cropped. The OpenCV Zoo CRNN~\cite{shi2015crnn,zoo} runs through
 \cv{dnn.TextRecognitionModel} with CTC greedy decoding. In a frame, each read $k$ at mark $i$
 proposes the datum $D=k+u_i$; a dropped leading ``1'' is the usual misread, so only the longest
-reads may vote. Across setup frames the majority wins: $D=20$~ft in 6 of 7 frames. Stage is
+reads may vote. Across the setup frames the majority wins: $D=20$~ft in 6 of 7 frames (\texttt{sites/hancock/site.json}). Stage is
 then $s=D-u$.
 
 \subsection{Every frame}
@@ -164,7 +164,8 @@ processed once) and gauge values; \textcircled{\scriptsize 3} on an event it run
 in which Claude on Bedrock chooses tools and the Lambda executes them; \textcircled{\scriptsize 4}
 results and the approval queue go to a private S3 bucket; \textcircled{\scriptsize 5}--\textcircled{\scriptsize 6}
 a second Lambda serves the dashboard, the flood replay and the measure endpoint, and records the
-operator's decisions.}
+operator's decisions; \textcircled{\scriptsize 7} an approved flag or alert is e-mailed through
+Amazon SNS, the only path out of the system.}
 \label{fig:arch}
 \end{figure*}
 
@@ -176,7 +177,8 @@ Bedrock client. Evidence tools: \texttt{reread\_earlier\_frames} (re-runs the re
 counts), \texttt{get\_site\_gauge}, \texttt{get\_upstream\_gauge}. Final actions:
 \texttt{flag\_sensor} and \texttt{draft\_alert} (both enter the approval queue),
 \texttt{publish\_provisional\_stage} and \texttt{no\_action}. Two operator facts are in the
-prompt: readings move in steps of about 0.5~ft, and upstream changes arrive about 3~h later.
+prompt: readings move in steps of about 0.5~ft, and upstream changes arrive about 3~h later. The
+prompt also gives the reader's accuracy, 0.26~ft RMSE, which was measured on the same flood.
 
 \begin{table}[t]
 \caption{Events that call the agent (checked by code on every frame)}
@@ -188,7 +190,7 @@ prompt: readings move in steps of about 0.5~ft, and upstream changes arrive abou
 Event & Trigger\\
 \midrule
 \texttt{disagree} & camera and gauge differ by $>0.5$~ft for 2 frames, or the camera is below the plate while the gauge reads $>0.5$~ft above it\\
-\texttt{gauge\_silent} & the camera reads, but the gauge has no value in the last 30~min\\
+\texttt{gauge\_silent} & the camera reads, but the gauge has no value in the last 30~min (90~min live, for the USGS reporting delay)\\
 \texttt{camera\_blind} & camera unreadable or moved for 3 frames while the gauge is at or above action stage\\
 \texttt{level\_rise} & the stage (camera when readable, else gauge) reaches an NWS level\\
 \bottomrule
@@ -205,40 +207,51 @@ system without an operator's approval.
 Both functions run on arm64 (Graviton) from one zip package that bundles the Linux arm64 wheels
 of \texttt{opencv-python-headless} 5.0.0.93 and the flood replay; it is built without Docker and
 deployed by an idempotent script that creates the bucket, the IAM role, both functions, the
-schedule and a Function URL (Fig.~\ref{fig:arch}). The role can read and write only the project
-bucket and invoke Anthropic models on Bedrock. From CloudWatch, a scheduled tick (download,
+schedule, a Function URL and an SNS topic for approved alerts (Fig.~\ref{fig:arch}). The role can
+write logs, read and write only the project bucket, invoke Anthropic models on Bedrock and publish
+to that one topic. From CloudWatch, a scheduled tick (download,
 read, event check, write) takes a median of 6.3~s ($n=23$, peak memory 295~MB) and an API
 request a median of 47~ms ($n=1{,}227$). Claude is called only on events: none on a quiet day,
-two or three during the flood, each with three evidence calls and one or two actions. With Opus~4.6 a replayed flood used
-\AgentTokens{} (median over runs).
+two or three during the flood, each with three evidence calls and one to three actions. With
+Opus~4.6 one replayed scenario used \AgentTokens{} (median of three runs; adaptive thinking,
+effort medium).
 
-\textbf{COOL on Graviton4.} To test the Cloud-Optimized OpenCV Library (COOL~3.1, OpenCV
-5.1-dev with KleidiCV~0.7.0, built for Neoverse-V2), we ran the reader on the 184 frames of
-21~July--1~August on one c8g.xlarge (4 vCPU Graviton4) twice: with COOL and with the pip
-\texttt{opencv-python-headless}~5.0.0 that the Lambda functions use (Table~\ref{tab:cool};
+\textbf{COOL on Graviton4.} The live tick runs on Lambda; a new site needs a batch pass over its
+camera archive, and that pass runs on EC2 Graviton4 with the Cloud-Optimized OpenCV Library (COOL~3.1:
+OpenCV 5.1-dev with KleidiCV~0.7.0, built for Neoverse-V2). We measured it against the pip
+\texttt{opencv-python-headless}~5.0.0 that Lambda uses, on the same instance (Table~\ref{tab:cool};
 \texttt{scripts/cool\_run.py} launches the instance, runs both builds, uploads the results and
-terminates it). Both builds read the same stage in all 184 frames. COOL is 4\% faster end to end
-and up to 4.9$\times$ faster in single kernels; the reader's remaining time is NumPy and Python.
-COOL's DNN text recognizer aborted with a heap error in 3 of 3 runs, while pip OpenCV ran it, so
-the one-time datum reading stays on the pip build.
+terminates it). Both builds read the same status and stage in every frame. With 16 worker processes a
+c8g.4xlarge reads the whole 90-day archive (\BatchFrames{} frames) in \BatchSeconds~s, about
+\$\CostArchive{} at on-demand prices (\$\CostPerK{} per 1,000 frames); throughput scales almost
+linearly from \BatchOne{} frames/s with one worker. COOL is 4\% faster in a single process and up to
+4.9$\times$ faster in single kernels, but the batch is bound by NumPy and Python, so both builds tie
+there. COOL's DNN text recognizer aborted with a heap error on c8g.xlarge in every run (2 recorded)
+and ran normally on c8g.4xlarge; a minimal reproduction is in \texttt{scripts/cool\_dnn\_repro.py}.
 
 \begin{table}[t]
-\caption{Same Graviton4 instance (c8g.xlarge), COOL vs pip OpenCV}
+\caption{COOL vs pip OpenCV on the same Graviton4 instances}
 \label{tab:cool}
 \centering\footnotesize
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}lccc@{}}
 \toprule
- & COOL 3.1 & pip 5.0.0 & speed-up\\
+ & COOL 3.1 & pip 5.0.0 & ratio\\
 \midrule
-full reader, frames/s & \COOLfps & \PIPfps & \COOLspeed\\
+\multicolumn{4}{@{}l}{\emph{c8g.xlarge (4 vCPU), one process, 184 flood frames}}\\
+reader, frames/s & \COOLfps & \PIPfps & \COOLspeed\\
 \texttt{connectedComponentsWithStats} & \COOLcc~ms & \PIPcc~ms & \COOLccx\\
 \texttt{phaseCorrelate} (plate crop) & \COOLpc~ms & \PIPpc~ms & \COOLpcx\\
 \texttt{morphologyEx} (opening) & \COOLmo~ms & \PIPmo~ms & \COOLmox\\
 \texttt{imdecode} (1080$\times$1920 JPEG) & \COOLid~ms & \PIPid~ms & \COOLidx\\
 DNN text recognition (datum) & crashed & \PIPocr~s & --\\
+\midrule
+\multicolumn{4}{@{}l}{\emph{c8g.4xlarge (16 vCPU)}}\\
+reader, one process, frames/s & \COOLfpsXL & \PIPfpsXL & \COOLspeedXL\\
+archive batch, \BatchWorkers{} workers, frames/s & \COOLbatch & \PIPbatch & \COOLbatchx\\
+DNN text recognition (datum) & \COOLocrXL~s & \PIPocrXL~s & --\\
 \bottomrule
-\multicolumn{4}{@{}p{0.95\columnwidth}@{}}{\scriptsize Medians; reader over 184 frames, 2 passes; kernels over 50 calls. Identical stages in all frames. \texttt{results/cool/}.}
+\multicolumn{4}{@{}p{0.95\columnwidth}@{}}{\scriptsize Medians; kernels over 50 calls. Identical stages from both builds in every run. Prices: AWS Pricing API, us-east-2 on-demand, plus the COOL software fee. \texttt{results/cool/}.}
 \end{tabular}
 \end{table}
 
@@ -295,8 +308,8 @@ UTC). The camera reads during the two high-water periods; otherwise the water is
 plate (light) or it is night (dark).}
 \label{fig:coverage}
 \end{figure*}
-Over the 1,863 frames of the 90-day replay the reader gave a number for 45 (2.4\%,
-Fig.~\ref{fig:coverage}); the water was below the plate for 65\% and 33\% were night or
+Over the 1,869 hourly frames of 21~July to 19~October the reader gave a number for 45 (2.4\%,
+Fig.~\ref{fig:coverage}); the water was below the plate for 64\% and 33\% were night or
 obscured. The plate is a flood instrument: it reads when the river is high, which is when a
 gauge fault matters most.
 
@@ -312,7 +325,7 @@ Each Claude model ran every scenario \AgentRuns{} times (Table~\ref{tab:agent}).
 \centering
 \includegraphics[width=\textwidth]{timeline.pdf}
 \caption{Frozen-gauge replay (one Opus~4.6 run). The reported gauge stays at 17.21~ft while the
-river rises to its second peak and falls. Claude flags the gauge 2~h after the fault; the rule
+river rises to its second peak and falls. Claude flags the gauge 2~h after the fault starts (13:00 UTC); the rule
 baseline flags it after 4~h, once three frames disagree consistently.}
 \label{fig:timeline}
 \end{figure*}
@@ -332,9 +345,9 @@ spray removes their color. The reader reads too high and the gauge is right.}
 
 Fixed thresholds cannot tell which instrument is wrong: in both camera faults they see a
 persistent disagreement, blame the gauge and publish the bad camera stage (Fig.~\ref{fig:faults}).
-Claude checks the evidence and blames the camera (Fig.~\ref{fig:trace}). The rules were not
-given the mark-count signal Claude used; a rule that blames the camera when visible marks drop
-while the gauge falls would likely catch these two cases, but not faults it was not written for.
+Claude checks the evidence and blames the camera (Fig.~\ref{fig:trace}). The rule planner was
+not given the mark-count signal Claude used; a rule written for it is an obvious extension that we
+did not test.
 
 \begin{figure}[t]
 \begin{tracebox}{Claude Opus 4.6, debris case, 29 July 19:00 UTC (verbatim)}
@@ -343,6 +356,7 @@ while the gauge falls would likely catch these two cases, but not faults it was 
 \textbf{flag\_sensor(camera), evidence:} ``Camera reads 18.74 ft vs gauge 17.63 ft (+1.11 ft,
 $>$4$\times$ RMSE). Visible marks fell from 11 to 7 even as the gauge recedes smoothly from its
 18.06 ft peak. Upstream gauge confirms falling trend with appropriate 3-hour lag. [\ldots]''
+(The lag Claude cites is the prompt's 3~h; for this flood it was about 7~h, Sec.~\ref{sec:history}.)
 \end{tracebox}
 \caption{An agent decision in the debris case: the evidence Claude gathered and the flag it
 queued for approval.}
@@ -353,6 +367,7 @@ In 90 days of normal operation (1,863 frames, rule planner) there were no false 
 the two alerts were an action alert and a flood alert, both at the real flood.
 
 \subsection{Development history of the agent}
+\label{sec:history}
 We report every Claude run. \emph{Run 1} (no saved log) missed the drift and blamed the camera;
 the two operator facts above were added. \emph{Run 2} caught every fault but, in the frozen-gauge
 case, forgot its own gauge flag and drafted no flood alert during a real flood. The fix was in
@@ -360,8 +375,8 @@ code, not in the prompt: memory of open issues and the safety net. \emph{Run 3},
 shown in Fig.~\ref{fig:timeline}: the safety net fired once, again in the frozen-gauge case.
 Claude flagged the frozen gauge, but partly for a wrong reason: it inferred from the 3~h lag
 that the river was receding, while this flood peaked about 7~h after the upstream peak. It
-therefore called a correct 17.77~ft camera reading a spike, and its provisional stages were
-0.3--0.45~ft low. We did not re-tune the lag to this flood. The repeated runs in
+therefore dismissed the 18.44~ft flood-level camera reading at 17:00 (true 18.08~ft) and flagged
+the camera, and its provisional stages were 0.3--0.45~ft low. We did not re-tune the lag to this flood. The repeated runs in
 Table~\ref{tab:agent} use the code of run~3.
 
 \section{Limitations and Threats to Validity}
@@ -379,13 +394,13 @@ range on the Hancock wall) but does not extrapolate to floods; on far-bank bridg
 account; the model is a configuration setting (\texttt{AGENT\_MODEL}).
 
 \section{Responsible Operation}
-StageSight is a decision aid, not an official warning system. Nothing is sent without an
-operator's approval; live approvals require an operator token, and approvals in the public
+StageSight is a decision aid, not an official warning system. Nothing leaves the system until an
+operator approves it; approved flags and alerts are then e-mailed through Amazon SNS. Live
+approvals require an operator token, and approvals in the public
 replay change nothing. A camera stage that stands in for the gauge is labeled provisional. The
 system uses public data and no personal data. The bucket is private, the role is limited as
 above, failed ticks are not retried, and every agent decision, tool call and reason is logged
-and shown on the dashboard. The public \texttt{/measure} endpoint reads uploaded frames of this
-camera only.
+and shown on the dashboard. The public \texttt{/measure} endpoint accepts only frames of this camera's size (1080$\times$1920).
 
 \section{Conclusion}
 A camera that already watches a staff plate can measure stage by geometry and OCR alone, through
@@ -393,12 +408,12 @@ a flood above everything seen in setup, and that independent reading lets an age
 instrument is wrong. Next: read night infrared frames from the printed numbers and support more
 plate designs across the NIMS network.
 
-\textbf{Reproducibility.} Code, results and figures: \url{https://github.com/Waqar-msx9t/stagesight}
+\textbf{Reproducibility.} Code, results and figures:\newline \url{https://github.com/Waqar-msx9t/stagesight}
 (Python~3.12, OpenCV 5.0.0.93, NumPy 2.5.4, Anthropic SDK 1.15.0). The tests run offline; the
 scripts \emph{plate\_test}, \emph{replay\_agent} and \emph{make\_figures} reproduce every number and
 figure.
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{9}\raggedright
 \bibitem{nims} U.S. Geological Survey, ``National Imagery Management System (NIMS) API,'' \url{https://api.waterdata.usgs.gov/nims/v0}, accessed Oct.~2026.
 \bibitem{eltner2021} A. Eltner, P. O. Bressan, T. Akiyama, W. N. Gon\c{c}alves, and J. Marcato Junior, ``Using deep learning for automatic water stage measurements,'' \emph{Water Resources Research}, 2021, doi:10.1029/2020WR027608.
 \bibitem{blanch2026} X. Blanch, J. Grundmann, R. Hedel, and A. Eltner, ``AI image-based method for a robust automatic real-time water level monitoring: a long-term application case,'' \emph{Hydrology and Earth System Sciences}, vol.~30, p.~797, 2026, doi:10.5194/hess-30-797-2026.
