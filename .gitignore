@@ -7,6 +7,8 @@ var/
 # results: keep only the evidence the README and report cite
 results/*
 !results/hancock_plate/
+!results/hancock_plate_sep/
+!results/hancock_real_faults/
 !results/agent/
 !results/agent_90d/
 !results/figures/

@@ -26,6 +26,21 @@ frames with water on the plate, 27 of them above every frame used to train the b
 | Plate scale + offset fitted to the gauge | training | 0.37 | 25 of 30 |
 | Linear pixel fit, trained on the 4–5 Sep high water | training | 6.31 | 7 of 30 |
 
+**Second event, 4–5 Sep 2026 high water** (`results/hancock_plate_sep/`). The reader never used
+these frames; only the baselines above were trained on them. 15 daylight frames, gauge 11.63 to
+11.97 ft: RMSE 0.34 ft (95% bootstrap 0.29 to 0.38), bias +0.33 ft, 15 of 15 within 0.5 ft. The
+water stayed inside one gap between two marks, so all 15 readings are the same 12.11 ft (the gap
+midpoint): this is one measurement repeated, not 15 independent ones, and the error is the mark
+spacing, not noise.
+
+**Real degraded frames** (`results/hancock_real_faults/`). The 90-day archive has 87 daylight
+frames with the gauge at or above 11 ft. None shows rain on the lens, fog or glare (checked by
+eye; the quality gate rejected none), so real weather faults remain untested. The one real
+failure is hydraulic: at 29 July 15:00 UTC a standing wave of whitewater ran up the plate and
+the reader returned 17.77 ft against the gauge's 17.14 ft (+0.63 ft), the single July test frame
+outside 0.5 ft. Over all 1,249 daylight frames at any stage, no frame was rejected or
+unreadable; every `unreadable` frame in the archive is a night infrared frame.
+
 ![Flood](docs/figures/flood.png)
 
 Agent, replaying the same flood with injected faults, 3 runs per Claude model
@@ -128,7 +143,8 @@ token that live approvals need; it is stored in the API function's environment.
 ## Limitations
 Needs a plate with red marks in view and daylight; one reading resolves 0.1 to 0.8 ft, set by the
 mark spacing; below the plate (about 11 ft) the camera cannot check the gauge. The Hancock camera
-started in April 2026, so the 29 July flood is its only flood, and the camera faults in the agent
-evaluation are synthetic. StageSight is a decision aid, not an official warning system.
+started in April 2026, so the 29 July flood is its only flood (the 4–5 Sep high water, a second
+test event, stays inside one mark gap), and the camera faults in the agent evaluation are
+synthetic: the archive has no daylight frame degraded by rain, fog or glare. StageSight is a decision aid, not an official warning system.
 
 MIT licensed; third-party material in [NOTICE](NOTICE).

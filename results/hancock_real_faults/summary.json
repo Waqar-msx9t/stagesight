@@ -1,0 +1,22 @@
+{
+  "min_stage_ft": 11.0,
+  "min_saturation": 5.0,
+  "ocr_datum_ft": 20.0,
+  "daylight_frames": 87,
+  "quality_rejected": 0,
+  "status": {
+    "below_plate": 42,
+    "ok": 45
+  },
+  "flagged": [
+    {
+      "time_utc": "2026-07-29T15:00:12",
+      "stage_obs": 17.141,
+      "status": "ok",
+      "pred_ocr": 17.77,
+      "error_ft": 0.629,
+      "quality_reasons": "",
+      "bars_visible": "11111111110100000000000000000"
+    }
+  ]
+}
