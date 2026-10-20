@@ -1,3 +1,10 @@
-% prose that depends on the repeated runs (edit after scripts/agent_stats.py)
-\newcommand{\AgentAbstract}{caught every gauge fault, and it blamed the camera in both camera-fault cases where a rule baseline blamed the healthy gauge.}
-\newcommand{\AgentResults}{}
+% prose that depends on the repeated runs (results/agent/repeat_summary.json, scripts/agent_stats.py)
+\newcommand{\AgentAbstract}{In three replays of each injected fault, Claude Opus~4.6 caught all
+four gauge faults and blamed the camera in both camera-fault cases in every run, where a rule
+baseline blamed the healthy gauge; Claude Sonnet~4.6 missed a slow gauge drift in two of three runs.}
+\newcommand{\AgentResults}{Opus~4.6 handled every scenario in all three runs, with the same
+delays each time; it flagged the frozen gauge after 2~h against 4~h for the rules
+(Fig.~\ref{fig:timeline}) and the drift 1~h earlier. Sonnet~4.6 matched it except on the slow
+drift: in two of three runs it blamed the camera instead of the gauge, and one of those runs also
+flagged the camera before the fault began. In one Sonnet run Bedrock answered once with
+\texttt{ServiceUnavailable}; the rule planner decided that event, as designed.}

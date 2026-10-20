@@ -1,0 +1,48 @@
+{
+ "frames": 57,
+ "events": 3,
+ "flood_alert": true,
+ "action_alert": true,
+ "flags": [
+  [
+   "2026-07-29T15:00:12",
+   "site_gauge"
+  ],
+  [
+   "2026-07-29T15:00:12",
+   "camera"
+  ],
+  [
+   "2026-07-29T17:00:09",
+   "site_gauge"
+  ],
+  [
+   "2026-07-29T17:00:09",
+   "camera"
+  ]
+ ],
+ "alerts": [
+  [
+   "2026-07-29T10:00:02",
+   "action"
+  ],
+  [
+   "2026-07-29T17:00:09",
+   "flood"
+  ]
+ ],
+ "provisional": 1,
+ "false_flags": 0,
+ "detected": true,
+ "delay_h": 2.0033333333333334,
+ "fault": {
+  "kind": "flatline",
+  "start": "2026-07-29T13:00:00",
+  "end": "2026-07-29T23:00:00",
+  "size_ft": 0.0
+ },
+ "fallbacks": 0,
+ "model": "global.anthropic.claude-sonnet-4-6",
+ "tokens_in": 56980,
+ "tokens_out": 15739
+}

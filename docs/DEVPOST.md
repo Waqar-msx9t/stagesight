@@ -60,7 +60,9 @@ camera to become a second instrument that can check the first.
   USGS gauge, 29 of 30 readings within 0.5 ft, with no gauge data.** A linear pixel fit trained on
   normal flows has 6.3 ft RMSE. The camera follows both flood peaks.
 - **Injected faults, repeated runs** (Claude Opus 4.6 and Sonnet 4.6 against a rule baseline):
-  [fill from report Table III: catch rates and median delays].
+  Opus 4.6 caught all four gauge faults in 3 of 3 runs (frozen gauge in 2 h vs 4 h for the rules,
+  drift in 7 h vs 8 h) and blamed the camera in both camera faults in 3 of 3 runs. Sonnet 4.6 missed
+  the slow drift in 2 of 3 runs; the report shows it.
 - **Camera faults** (debris over the plate, spray on the lens) with a healthy gauge: the rule
   baseline blamed the healthy gauge and published the bad camera stage; Claude blamed the camera.
   In the debris case it noticed the visible marks drop from 11 to 7 while both gauges said the

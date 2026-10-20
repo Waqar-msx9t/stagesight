@@ -1,65 +1,79 @@
 {
- "runs_per_model": 1,
+ "runs_per_model": 3,
  "rows": {
   "offset": {
    "opus": {
-    "caught": 1,
-    "runs": 1,
+    "caught": 3,
+    "runs": 3,
     "delays_h": [
+     1.001111111111111,
+     1.001111111111111,
      1.001111111111111
     ]
    },
    "sonnet": {
-    "caught": 1,
-    "runs": 1,
+    "caught": 3,
+    "runs": 3,
     "delays_h": [
+     1.001111111111111,
+     1.001111111111111,
      1.001111111111111
     ]
    }
   },
   "dropout": {
    "opus": {
-    "caught": 1,
-    "runs": 1,
+    "caught": 3,
+    "runs": 3,
     "delays_h": [
+     1.0025,
+     1.0025,
      1.0025
     ]
    },
    "sonnet": {
-    "caught": 1,
-    "runs": 1,
+    "caught": 3,
+    "runs": 3,
     "delays_h": [
+     1.0025,
+     1.0025,
      1.0025
     ]
    }
   },
   "flatline": {
    "opus": {
-    "caught": 1,
-    "runs": 1,
+    "caught": 3,
+    "runs": 3,
     "delays_h": [
+     2.0033333333333334,
+     2.0033333333333334,
      2.0033333333333334
     ]
    },
    "sonnet": {
-    "caught": 1,
-    "runs": 1,
+    "caught": 3,
+    "runs": 3,
     "delays_h": [
+     2.0033333333333334,
+     2.0033333333333334,
      2.0033333333333334
     ]
    }
   },
   "drift": {
    "opus": {
-    "caught": 1,
-    "runs": 1,
+    "caught": 3,
+    "runs": 3,
     "delays_h": [
+     7.002222222222223,
+     7.002222222222223,
      7.002222222222223
     ]
    },
    "sonnet": {
     "caught": 1,
-    "runs": 1,
+    "runs": 3,
     "delays_h": [
      7.002222222222223
     ]
@@ -67,51 +81,59 @@
   },
   "occlusion": {
    "opus": {
-    "handled": 1,
-    "runs": 1
+    "handled": 3,
+    "runs": 3
    },
    "sonnet": {
-    "handled": 1,
-    "runs": 1
+    "handled": 3,
+    "runs": 3
    }
   },
   "spray": {
    "opus": {
-    "handled": 1,
-    "runs": 1
+    "handled": 3,
+    "runs": 3
    },
    "sonnet": {
-    "handled": 1,
-    "runs": 1
+    "handled": 3,
+    "runs": 3
    }
   }
  },
  "false_flags": {
   "opus": 0,
-  "sonnet": 0
+  "sonnet": 1
  },
  "flood_alert_runs": {
-  "opus": 1,
-  "sonnet": 1
+  "opus": 3,
+  "sonnet": 3
  },
  "fallbacks": {
   "opus": 0,
-  "sonnet": 0
+  "sonnet": 1
  },
  "tokens_in_per_run": {
   "opus": [
-   187363
+   187363,
+   206669,
+   202010
   ],
   "sonnet": [
-   233061
+   233061,
+   258658,
+   232628
   ]
  },
  "tokens_out_per_run": {
   "opus": [
-   34565
+   34565,
+   34298,
+   34835
   ],
   "sonnet": [
-   71607
+   71607,
+   73771,
+   71136
   ]
  }
 }

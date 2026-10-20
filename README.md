@@ -25,10 +25,15 @@ frames with water on the plate, 27 of them above every frame used to train the b
 
 ![Flood](docs/figures/flood.png)
 
-Agent replays of the same flood with injected faults are in report Table III, with repeated runs of
-Claude Opus 4.6 and Sonnet 4.6 against a rule baseline (`results/agent/repeat_summary.json`). In
-both camera-fault cases (debris over the plate, spray on the lens) the rules blame the healthy gauge;
-Claude blames the camera. Over 90 days of normal operation (1,863 frames) the rule planner raised
+Agent, replaying the same flood with injected faults, 3 runs per Claude model (`results/agent/repeat_summary.json`):
+
+| Fault | Rule baseline | Claude Opus 4.6 | Claude Sonnet 4.6 |
+|---|---|---|---|
+| Gauge offset +1 ft / silent 8 h | caught, 1 h / 1 h | 3/3, 1 h / 3/3, 1 h | 3/3, 1 h / 3/3, 1 h |
+| Gauge frozen 10 h | caught, 4 h | **3/3, 2 h** | 3/3, 2 h |
+| Gauge drift to +1.5 ft | caught, 8 h | 3/3, 7 h | 1/3, 7 h |
+| Debris over the plate (camera wrong) | blamed the healthy gauge | **3/3 blamed the camera** | 3/3 |
+| Spray on the lens (camera wrong) | blamed the healthy gauge | **3/3 blamed the camera** | 3/3 | Over 90 days of normal operation (1,863 frames) the rule planner raised
 0 false sensor flags. The reader gives a number for 2.4% of all hourly frames: it reads floods; below
 the plate or at night it reports `below_plate` or `unreadable` instead of guessing.
 

@@ -1,0 +1,267 @@
+{
+ "none": {
+  "frames": 57,
+  "events": 2,
+  "flood_alert": true,
+  "action_alert": true,
+  "flags": [],
+  "alerts": [
+   [
+    "2026-07-29T10:00:02",
+    "action"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "flood"
+   ]
+  ],
+  "provisional": 0,
+  "false_flags": 0,
+  "fallbacks": 1,
+  "model": "global.anthropic.claude-sonnet-4-6",
+  "tokens_in": 11986,
+  "tokens_out": 4800
+ },
+ "drift": {
+  "frames": 57,
+  "events": 3,
+  "flood_alert": true,
+  "action_alert": true,
+  "flags": [
+   [
+    "2026-07-29T19:00:08",
+    "camera"
+   ]
+  ],
+  "alerts": [
+   [
+    "2026-07-29T10:00:02",
+    "action"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "flood"
+   ]
+  ],
+  "provisional": 0,
+  "false_flags": 0,
+  "detected": false,
+  "delay_h": null,
+  "fault": {
+   "kind": "drift",
+   "start": "2026-07-29T12:00:00",
+   "end": "2026-07-30T00:00:00",
+   "size_ft": 1.5
+  },
+  "fallbacks": 0,
+  "model": "global.anthropic.claude-sonnet-4-6",
+  "tokens_in": 31048,
+  "tokens_out": 9390
+ },
+ "offset": {
+  "frames": 57,
+  "events": 3,
+  "flood_alert": true,
+  "action_alert": true,
+  "flags": [
+   [
+    "2026-07-30T11:00:04",
+    "site_gauge"
+   ]
+  ],
+  "alerts": [
+   [
+    "2026-07-29T10:00:02",
+    "action"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "flood"
+   ]
+  ],
+  "provisional": 1,
+  "false_flags": 0,
+  "detected": true,
+  "delay_h": 1.001111111111111,
+  "fault": {
+   "kind": "offset",
+   "start": "2026-07-30T10:00:00",
+   "end": "2026-07-30T22:00:00",
+   "size_ft": 1.0
+  },
+  "fallbacks": 0,
+  "model": "global.anthropic.claude-sonnet-4-6",
+  "tokens_in": 35623,
+  "tokens_out": 8270
+ },
+ "flatline": {
+  "frames": 57,
+  "events": 3,
+  "flood_alert": true,
+  "action_alert": true,
+  "flags": [
+   [
+    "2026-07-29T15:00:12",
+    "site_gauge"
+   ],
+   [
+    "2026-07-29T15:00:12",
+    "camera"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "site_gauge"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "camera"
+   ]
+  ],
+  "alerts": [
+   [
+    "2026-07-29T10:00:02",
+    "action"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "flood"
+   ]
+  ],
+  "provisional": 0,
+  "false_flags": 0,
+  "detected": true,
+  "delay_h": 2.0033333333333334,
+  "fault": {
+   "kind": "flatline",
+   "start": "2026-07-29T13:00:00",
+   "end": "2026-07-29T23:00:00",
+   "size_ft": 0.0
+  },
+  "fallbacks": 0,
+  "model": "global.anthropic.claude-sonnet-4-6",
+  "tokens_in": 43621,
+  "tokens_out": 13157
+ },
+ "dropout": {
+  "frames": 57,
+  "events": 3,
+  "flood_alert": true,
+  "action_alert": true,
+  "flags": [
+   [
+    "2026-07-29T17:00:09",
+    "site_gauge"
+   ]
+  ],
+  "alerts": [
+   [
+    "2026-07-29T10:00:02",
+    "action"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "action"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "flood"
+   ]
+  ],
+  "provisional": 2,
+  "false_flags": 0,
+  "detected": true,
+  "delay_h": 1.0025,
+  "fault": {
+   "kind": "dropout",
+   "start": "2026-07-29T16:00:00",
+   "end": "2026-07-30T00:00:00",
+   "size_ft": 0.0
+  },
+  "fallbacks": 0,
+  "model": "global.anthropic.claude-sonnet-4-6",
+  "tokens_in": 35962,
+  "tokens_out": 13470
+ },
+ "occlusion": {
+  "frames": 57,
+  "events": 3,
+  "flood_alert": true,
+  "action_alert": true,
+  "flags": [
+   [
+    "2026-07-29T19:00:08",
+    "camera"
+   ]
+  ],
+  "alerts": [
+   [
+    "2026-07-29T10:00:02",
+    "action"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "flood"
+   ]
+  ],
+  "provisional": 0,
+  "blamed_gauge": 0,
+  "blamed_camera": 1,
+  "published_bad_camera": 0,
+  "false_flags": 0,
+  "correct": true,
+  "fault": {
+   "kind": "camera:occlusion",
+   "start": "2026-07-29T18:00:00",
+   "end": "2026-07-30T00:00:00",
+   "band_ft": [
+    16.6,
+    18.8
+   ]
+  },
+  "fallbacks": 0,
+  "model": "global.anthropic.claude-sonnet-4-6",
+  "tokens_in": 42763,
+  "tokens_out": 12174
+ },
+ "spray": {
+  "frames": 57,
+  "events": 3,
+  "flood_alert": true,
+  "action_alert": true,
+  "flags": [
+   [
+    "2026-07-30T11:00:04",
+    "camera"
+   ]
+  ],
+  "alerts": [
+   [
+    "2026-07-29T10:00:02",
+    "action"
+   ],
+   [
+    "2026-07-29T17:00:09",
+    "flood"
+   ]
+  ],
+  "provisional": 0,
+  "blamed_gauge": 0,
+  "blamed_camera": 1,
+  "published_bad_camera": 0,
+  "false_flags": 0,
+  "correct": true,
+  "fault": {
+   "kind": "camera:spray",
+   "start": "2026-07-30T10:00:00",
+   "end": "2026-07-30T17:00:00",
+   "band_ft": [
+    12.4,
+    14.8
+   ]
+  },
+  "fallbacks": 0,
+  "model": "global.anthropic.claude-sonnet-4-6",
+  "tokens_in": 31625,
+  "tokens_out": 9875
+ }
+}

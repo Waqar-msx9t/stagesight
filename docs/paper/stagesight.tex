@@ -33,8 +33,7 @@ NY (USGS 01421500; NWS minor flood, 18.08~ft peak), the camera agrees with the U
 0.26~ft RMSE (95\% bootstrap interval 0.20--0.31~ft; 29 of 30 readings within 0.5~ft), whereas a
 regression trained on normal flows has 6.3~ft RMSE. An event-gated agent (Claude on Amazon
 Bedrock) compares camera and gauge, gathers evidence with tools, and queues sensor flags and
-flood alerts for human approval. In \AgentRuns{} replays of injected faults per model, it
-\AgentAbstract{} The system runs live on AWS Lambda (Graviton), EventBridge, S3 and Bedrock,
+flood alerts for human approval. \AgentAbstract{} The system runs live on AWS Lambda (Graviton), EventBridge, S3 and Bedrock,
 and unchanged on a laptop CPU.
 \end{abstract}
 
@@ -230,7 +229,7 @@ Method & Gauge data & RMSE & Bias & $\leq$0.5 ft\\
 Plate + gauge-fitted offset & training & 0.37 & $-0.27$ & 83\%\\
 Linear pixel fit & training & 6.31 & $-4.70$ & 23\%\\
 \bottomrule
-\multicolumn{5}{@{}l}{\scriptsize Errors in ft. StageSight MAE 0.21~ft, $R^2=0.99$; RMSE 95\% bootstrap interval 0.20--0.31~ft.}
+\multicolumn{5}{@{}p{0.95\columnwidth}@{}}{\scriptsize Errors in ft. StageSight MAE 0.21~ft, $R^2=0.99$; RMSE 95\% bootstrap interval 0.20--0.31~ft.}
 \end{tabular}
 \end{table}
 

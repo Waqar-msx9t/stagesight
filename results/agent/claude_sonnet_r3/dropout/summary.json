@@ -1,0 +1,40 @@
+{
+ "frames": 57,
+ "events": 3,
+ "flood_alert": true,
+ "action_alert": true,
+ "flags": [
+  [
+   "2026-07-29T17:00:09",
+   "site_gauge"
+  ]
+ ],
+ "alerts": [
+  [
+   "2026-07-29T10:00:02",
+   "action"
+  ],
+  [
+   "2026-07-29T17:00:09",
+   "action"
+  ],
+  [
+   "2026-07-29T17:00:09",
+   "flood"
+  ]
+ ],
+ "provisional": 2,
+ "false_flags": 0,
+ "detected": true,
+ "delay_h": 1.0025,
+ "fault": {
+  "kind": "dropout",
+  "start": "2026-07-29T16:00:00",
+  "end": "2026-07-30T00:00:00",
+  "size_ft": 0.0
+ },
+ "fallbacks": 0,
+ "model": "global.anthropic.claude-sonnet-4-6",
+ "tokens_in": 35962,
+ "tokens_out": 13470
+}
