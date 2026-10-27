@@ -24,8 +24,8 @@ panels by name, not by position or color.
 | 2:02–2:16 | `DASH?mode=replay&s=flatline`. The replay starts three frames before the agent's first flag; let it play. On the flag frame it holds for about 4 s with a red "Agent caught a faulty gauge" banner and a red marker on the chart. | Code watches for events: camera and gauge disagree, the gauge goes silent, or the river reaches a flood level. Only then do we call Claude on Amazon Bedrock. | Claude on Bedrock runs only on events |
 | 2:16–2:46 | Same replay. Click the agent-action chip **Jul 29, 11:00: flag gauge** (11:00 ET = 15:00 UTC). Let the **Agent loop** panel light up step by step (event → re-read frames → site gauge → upstream gauge → flag gauge → person approves). Point at the striped red gauge column in the stage meter, the gauge tile **SUSPECT** badge, the triangle on the chart, the tool calls in the **Agent decision log**, then the flag in the **Human approval queue**. | In this replay we froze the gauge at 17.21 feet for 10 hours. Claude re-runs the OpenCV reader on earlier frames, checks the site gauge and an upstream gauge, and flags the gauge two hours after the fault starts. Fixed rules took four. The gauge is now marked suspect, and the flag waits for a person. | Frozen gauge: Claude 2 h, rules 4 h (3 of 3 runs) |
 | 2:46–3:14 | Scenario menu → **Debris covers the plate (camera wrong)** (`s=occlusion`). Click the chip **Jul 29, 15:00: flag camera** (15:00 ET = 19:00 UTC). Point at the frame, then highlight the log line about marks falling from 11 to 7. | The camera can be wrong too. Here we put simulated debris over the plate. The rule baseline blamed the healthy gauge and published the bad camera stage. Claude saw the visible marks drop from 11 to 7 while both gauges were falling, and blamed the camera. It got this right in 3 of 3 runs, and for spray on the lens too. | Debris: rules blamed the gauge; Claude blamed the camera (3 of 3) |
-| 3:14–3:32 | **Human approval queue**: click **Approve** in the replay (it shows "approved (replay, nothing sent)"). Cut to the mail inbox with the real SNS email from the live system (see checklist). | Nothing leaves the system without a person. In the public replay, Approve changes nothing. On the live system, an operator approves with a token, and Amazon SNS sends the email. | Human approval → Amazon SNS email |
-| 3:32–3:54 | `docs/figures/architecture.png` full screen, then quick cuts of the AWS console: Lambda functions, EventBridge rule, Bedrock, SNS topic. | EventBridge starts the reader every 15 minutes. Both Lambda functions run on Graviton arm64 with OpenCV 5. Results go to a private S3 bucket, Bedrock is called only on events, and SNS sends approved items. A tick takes a median of 6.3 seconds. | Lambda (Graviton arm64) · EventBridge · S3 · Bedrock · SNS |
+| 3:14–3:32 | Tab 1, **Human approval queue**: click **Approve** on one item (it shows "approved (replay, nothing sent)"), then point at the "SNS e-mail" step in the **Agent loop** panel. | Nothing leaves the system without a person. In the public replay, Approve changes nothing. On the live system, an operator approves with a token, and Amazon SNS sends the email. | Human approval → Amazon SNS email |
+| 3:32–3:54 | Tab 6, `docs/figures/architecture.png` full screen. Follow the numbered badges 1 to 7 with the mouse, then the EC2 Graviton4 box top left. | EventBridge starts the reader every 15 minutes. Both Lambda functions run on Graviton arm64 with OpenCV 5. Results go to a private S3 bucket, Bedrock is called only on events, and SNS sends approved items. A tick takes a median of 6.3 seconds. | Lambda (Graviton arm64) · EventBridge · S3 · Bedrock · SNS |
 | 3:54–4:04 | Dashboard **Try the reader**: upload `tests/fixtures/hancock_flood_17.61ft.jpg`, show the stage and the raw JSON. | Anyone can test the reader. We upload a flood frame, and Lambda returns the stage it read. | POST /measure on AWS Lambda |
 | 4:04–4:20 | Report Table II (`docs/StageSight_report.pdf`), or `results/cool/` summary. | To set up a new site, we re-read the camera's archive on EC2 Graviton4 with COOL. With 16 workers, a c8g.4xlarge reads all 1,869 frames in 4.1 seconds, for less than a tenth of a cent. | COOL on Graviton4: 1,869 frames in 4.1 s, about $0.0008 |
 | 4:20–4:34 | Back to `s=flatline`, chip **Jul 29, 13:00: provisional stage, flood alert** (13:00 ET = 17:00 UTC); point at the safety-net flood alert in the queue. | Limits: one camera, one flood, simulated camera faults, daylight only. Claude also doubted the healthy camera at the second peak, so this flood alert came from our safety net. | Limits: one flood · synthetic camera faults · safety net drafted this alert |
@@ -40,16 +40,15 @@ panels by name, not by position or color.
   clip and join them in Clipchamp; retakes stay short.
 - Webcam for 0:10–0:22 only (the rules require the team on screen).
 
-**Preload these tabs, in order**
-1. `DASH?mode=replay&s=flatline`, paused, scrubbed to about 13:00 ET (hook shot).
-2. `DASH` (default view, for the dashboard tour).
-3. `docs/figures/pipeline.png`, `docs/figures/flood.png`, `docs/figures/architecture.png` (open locally).
-4. `DASH?mode=replay&s=flatline` paused at the start (agent segment).
-5. `DASH?mode=replay&s=occlusion` (debris segment; you can also switch with the scenario menu).
-6. `docs/StageSight_report.pdf` open at Table II (COOL).
-7. AWS console, region **us-east-2 (Ohio)**, signed in before recording (see below).
-8. Mail inbox with the SNS email open.
-9. `https://github.com/Waqar-msx9t/stagesight`, scrolled to the README title.
+**Chrome tabs, in this order (already opened for you; close the AWS tabs)**
+1. Frozen-gauge replay `DASH?mode=replay&s=flatline` (hook, overlay, agent, approval and limits clips). Press F5 to restart it.
+2. Dashboard home `DASH` (tour, Try the reader).
+3. `docs/figures/pipeline.png`
+4. `docs/figures/flood.png`
+5. Debris replay `DASH?mode=replay&s=occlusion` (camera-fault clip). Press F5 to restart it.
+6. `docs/figures/architecture.png`
+7. `docs/StageSight_report.pdf` at page 4 (Table II, COOL).
+8. `https://github.com/Waqar-msx9t/stagesight`
 
 **What to click**
 - Agent segment: play the flatline replay from the start, then click the chip **Jul 29, 11:00: flag gauge** (gauge flag,
@@ -61,24 +60,6 @@ panels by name, not by position or color.
 - Try the reader: upload `tests/fixtures/hancock_flood_17.61ft.jpg` (1080x1920, the only size
   `/measure` accepts). Show the stage and the raw JSON. Do not state an expected value on camera
   unless it appears in the response.
-
-**AWS console proof (3:32–3:54, about 3 s each)**
-- Lambda → Functions: `stagesight-scheduled` and `stagesight-api`, with Architecture **arm64** visible;
-  open `stagesight-api` → Configuration → Function URL (matches `DASH`).
-- EventBridge → Rules: `stagesight-every-15-min` (rate 15 minutes, target `stagesight-scheduled`).
-- Bedrock → Model access (Anthropic Claude enabled), or CloudWatch logs of a tick showing a Bedrock call.
-- SNS → Topics: `stagesight-alerts` with a **Confirmed** email subscription.
-- S3: the private project bucket (Block public access: On). Optional if time is short.
-- Blur or crop the account ID, the operator token (Lambda environment variables) and the email address.
-  Never open the `stagesight-api` environment variables tab on camera unblurred.
-
-**SNS email proof**
-- Use a real email that SNS sent after a live approval. If none exists yet, approve a real pending item
-  on the live dashboard (`?mode=live`) with the operator token, off camera, and record the inbox.
-- If the live queue is empty before recording, show the SNS topic and subscription in the console and
-  change the narration line to: "On the live system, an operator approves with a token, and Amazon SNS
-  emails the result." Do not present a console "Publish message" test as an approved alert; if you use
-  one, caption it "SNS test message".
 
 **Close**
 - GitHub repo page with the URL on screen; the report PDF is linked from the README
