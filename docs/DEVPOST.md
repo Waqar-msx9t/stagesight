@@ -164,7 +164,7 @@ Muhammad Waqar Saleem (solo): computer vision, agent, AWS deployment, evaluation
    in 10 minutes").
 
 ## Video demo link
-[unlisted YouTube link, 5 min or less]
+https://youtu.be/YnP3MDY5Bgs
 
 ## Files to upload
 - `docs/StageSight_report.pdf` (technical report)

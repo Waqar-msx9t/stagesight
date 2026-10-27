@@ -6,6 +6,7 @@ instrument is wrong, and queues sensor flags and flood alerts for a person to ap
 items are e-mailed through Amazon SNS. It runs live on AWS (Lambda on Graviton, EventBridge, S3,
 SNS, Bedrock), its archive batch runs on EC2 Graviton4 with COOL, and the same code runs on a laptop CPU.
 
+- **Demo video (4:55):** https://youtu.be/YnP3MDY5Bgs
 - **Live dashboard:** https://zkdbpwl26gqzom5j3osjaoi4dy0htqoq.lambda-url.us-east-2.on.aws/
   When the river is low or it is night, it opens a replay of the 29 July 2026 flood with the agent's
   recorded decisions; pick a fault in the scenario menu. `?mode=live` shows the live camera.
